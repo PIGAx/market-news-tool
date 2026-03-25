@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日市場新聞整理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --navy-mid: #1a2e45;
+    --red-light: #e74c3c;
+    --gold: #c9922a;
+    --gold-light: #e8b45a;
+    --white: #f5f0e8;
+    --white-dim: #d6cfc2;
+    --green: #27ae60;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Noto Serif TC', serif;
+    --sans: 'Noto Sans TC', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--navy); color: var(--white); font-family: var(--sans);
+    min-height: 100vh; padding: 32px 16px;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(201,146,42,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(192,57,43,0.05) 0%, transparent 60%);
+  }
+  header { text-align: center; margin-bottom: 40px; }
+  header .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; margin-bottom: 10px; }
+  header h1 { font-family: var(--serif); font-size: 26px; font-weight: 700; letter-spacing: 2px; }
+  header .subtitle { margin-top: 6px; font-size: 12px; color: var(--white-dim); letter-spacing: 1px; }
+  .divider { width: 60px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); margin: 16px auto; }
+  .container { max-width: 960px; margin: 0 auto; }
+  .panel { background: var(--navy-mid); border: 1px solid rgba(201,146,42,0.2); border-radius: 4px; padding: 24px; margin-bottom: 20px; }
+  .panel-title { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .panel-title::after { content: ''; flex: 1; height: 1px; background: rgba(201,146,42,0.2); }
+  textarea { width: 100%; background: var(--navy); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px; color: var(--white); font-family: var(--sans); font-size: 13px; line-height: 1.8; padding: 14px; resize: vertical; outline: none; transition: border-color 0.2s; }
+  textarea:focus { border-color: rgba(201,146,42,0.5); }
+  textarea::placeholder { color: rgba(255,255,255,0.2); }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--white-dim); }
+  input[type="text"], input[type="date"] {
+    background: var(--navy); border: 1px solid rgba(255,255,255,0.08); border-radius: 3px;
+    color: var(--white); font-family: var(--mono); font-size: 13px; padding: 8px 12px; outline: none; transition: border-color 0.2s;
+  }
+  input:focus { border-color: rgba(201,146,42,0.5); }
+  .ranges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .range-item { display: flex; flex-direction: column; gap: 6px; }
+  .range-item label { font-family: var(--mono); font-size: 10px; color: var(--white-dim); letter-spacing: 1.5px; }
+  .range-item input { width: 100%; }
+  .meta-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  input[type="date"] { width: 180px; }
+  .btn-row { display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
+  button { font-family: var(--mono); font-size: 11px; letter-spacing: 2px; padding: 10px 24px; border-radius: 2px; border: none; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+  .btn-primary { background: var(--gold); color: var(--navy); font-weight: 500; }
+  .btn-primary:hover { background: var(--gold-light); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: transparent; color: var(--white-dim); border: 1px solid rgba(255,255,255,0.15); }
+  .btn-secondary:hover { border-color: var(--white-dim); color: var(--white); }
+  .btn-copy { background: transparent; color: var(--green); border: 1px solid rgba(39,174,96,0.4); margin-left: auto; }
+  .btn-copy:hover { background: rgba(39,174,96,0.1); }
+  .status-bar { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--white-dim); padding: 10px 0; min-height: 36px; }
+  .spinner { width: 14px; height: 14px; border: 2px solid rgba(201,146,42,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
+  .spinner.active { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #output-section { display: none; }
+  #output-section.visible { display: block; }
+  .market-block { background: var(--navy-mid); border-left: 3px solid var(--gold); padding: 20px 24px; margin-bottom: 16px; border-radius: 0 4px 4px 0; animation: fadeIn 0.4s ease both; }
+  .market-block:nth-child(2n) { border-left-color: #c0392b; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .market-name { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 10px; }
+  .market-block:nth-child(2n) .market-name { color: var(--red-light); }
+  .market-content { font-family: var(--serif); font-size: 14px; line-height: 2; color: var(--white); }
+  .market-content-edit { width: 100%; background: transparent; border: 1px solid rgba(255,255,255,0.06); color: var(--white); font-family: var(--serif); font-size: 14px; line-height: 2; padding: 8px; border-radius: 3px; resize: vertical; outline: none; display: none; }
+  .market-content-edit:focus { border-color: rgba(201,146,42,0.4); }
+  .block-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+  .btn-tiny { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; padding: 4px 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: var(--white-dim); cursor: pointer; text-transform: uppercase; }
+  .btn-tiny:hover { border-color: var(--gold); color: var(--gold); }
+  #final-output { background: var(--navy); border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; padding: 20px; font-family: var(--serif); font-size: 14px; line-height: 2.2; color: var(--white); white-space: pre-wrap; display: none; }
+  #final-output.visible { display: block; }
+  .output-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .copied-msg { font-family: var(--mono); font-size: 10px; color: var(--green); letter-spacing: 2px; opacity: 0; transition: opacity 0.3s; }
+  .copied-msg.show { opacity: 1; }
+  @media (max-width: 600px) { header h1 { font-size: 20px; } .ranges-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="eyebrow">Daily Market Report</div>
+    <h1>每日市場新聞整理</h1>
+    <div class="subtitle">六大市場 · Claude AI 輔助撰寫</div>
+    <div class="divider"></div>
+  </header>
+
+  <!-- ① 原始新聞 -->
+  <div class="panel">
+    <div class="panel-title">① 貼上原始新聞來源</div>
+    <textarea id="raw-input" rows="10" placeholder="將從路透終端複製的原始新聞全文貼在這裡…（六個市場混貼亦可）"></textarea>
+  </div>
+
+  <!-- ② 預估區間 -->
+  <div class="panel">
+    <div class="panel-title">② 貼上 Excel 預估區間文字</div>
+    <textarea id="range-all" rows="5" placeholder="直接把 Excel 黃色區塊的文字貼進來，例如：&#10;今日美元兌台幣匯率預估交易區間在 32.008-32.048&#10;在岸人民幣收盤價6.893(前6.893)，離岸人民幣收盤價6.894(前6.884)，今日CNH預估區間為6.8488-6.9288&#10;EURUSD下跌至1.1608，今日預估區間交易為1.1548-1.1668，USDJPY升至158.7，今日預估區間交易為157.93-161.03"></textarea>
+  </div>
+
+  <!-- ③ 日期 -->
+  <div class="panel">
+    <div class="panel-title">③ 設定交易日期</div>
+    <div class="meta-row">
+      <div class="field-group">
+        <span class="field-label">昨日交易日（報告所指日期）</span>
+        <input type="date" id="trade-date">
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-primary" id="btn-generate">▶ 產生整理報告</button>
+    <button class="btn-secondary" id="btn-clear">清除全部</button>
+  </div>
+
+  <div class="status-bar">
+    <div class="spinner" id="spinner"></div>
+    <span id="status-msg"></span>
+  </div>
+
+  <!-- Output -->
+  <div id="output-section">
+    <div class="panel-title" style="margin-bottom:16px;">④ 整理結果（可個別編輯）</div>
+    <div id="blocks-container"></div>
+    <div class="output-header" style="margin-top:28px;">
+      <div class="panel-title" style="margin-bottom:0;flex:1;">⑤ 完整報告文字</div>
+      <button class="btn-copy" id="btn-copy">複製全文</button>
+      <span class="copied-msg" id="copied-msg">✓ 已複製</span>
+    </div>
+    <div id="final-output"></div>
+  </div>
+
+</div>
+<script>
+const $ = id => document.getElementById(id);
+
+// Default date = yesterday
+(function() {
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  $('trade-date').value = d.toISOString().slice(0, 10);
+})();
+
+function formatDate(str) {
+  if (!str) return '';
+  const d = new Date(str + 'T00:00:00');
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+function setStatus(msg, isError = false) {
+  $('status-msg').textContent = msg;
+  $('status-msg').style.color = isError ? '#e74c3c' : '#d6cfc2';
+}
+
+function setSpinner(on) { $('spinner').classList.toggle('active', on); }
+
+const MARKETS = [
+  { key: 'twd',   label: '台灣匯市' },
+  { key: 'cnh',   label: '中國匯市' },
+  { key: 'dxy',   label: '美元指數' },
+  { key: 'us_eq', label: '美國股市' },
+  { key: 'us_bd', label: '美國債市' },
+  { key: 'tw_bd', label: '台灣債市' },
+];
+
+$('btn-generate').addEventListener('click', async () => {
+  const raw = $('raw-input').value.trim();
+  if (!raw) { setStatus('請先貼上原始新聞內容', true); return; }
+
+  const dateLabel = formatDate($('trade-date').value) || '（請填入日期）';
+
+  const rangeRaw = $('range-all').value.trim();
+  const rangeBlock = rangeRaw
+    ? `\n\n【以下是從 Excel 模型取得的預估區間與行情文字，請直接嵌入相應市場段落的結尾，不要改動數字】\n${rangeRaw}`
+    : '';
+
+  const systemPrompt = `你是一位台灣金融機構的市場分析師，負責每日整理國際市場新聞為六大市場摘要。
+
+重要：你只能輸出一個純粹的 JSON 物件，絕對不可以有任何前言、說明、markdown 標記或反引號，格式如下：
+{"twd":"台灣匯市段落","cnh":"中國匯市段落","dxy":"美元指數段落","us_eq":"美國股市段落","us_bd":"美國債市段落","tw_bd":"台灣債市段落"}
+
+撰寫規範：
+1. 每段落以「${dateLabel}，」開頭
+2. 每段落約150-200字，文字精煉專業，適合金融機構書面報告
+3. 段落結構：當日行情概述 → 主要驅動因素 → 後續展望 → （如有）預估區間
+4. 台灣匯市結尾加入：今日美元兌台幣匯率預估交易區間在 XX-XX
+5. 中國匯市結尾加入：今日CNH預估區間為 XX-XX
+6. 美元指數結尾加入EURUSD與USDJPY預估區間（格式：EURUSD升至X.XXXX，今日預估區間交易為X.XXXX-X.XXXX。USDJPY下跌至XXX.XX，今日預估區間交易為XXX.XX-XXX.XX）
+7. 數字、點位、利率請從原始資料準確引用，不得自行捏造
+8. 使用繁體中文，語氣正式流暢
+9. 用語統一使用台灣慣用說法：「特朗普」→「川普」、「聯儲局」→「聯準會」、「人行」→「中國央行」、「滙率」→「匯率」，遇到其他對岸用語亦請自行對應修正`;
+
+  const userPrompt = `請根據以下原始新聞整理成六大市場摘要。${rangeBlock}\n\n【原始新聞】\n${raw}`;
+
+  $('btn-generate').disabled = true;
+  setSpinner(true);
+  setStatus('Claude 整理中，請稍候…');
+  $('output-section').classList.remove('visible');
+  $('final-output').classList.remove('visible');
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(`API 錯誤：${data.error.message}`);
+
+    const text = (data.content || []).map(b => b.text || '').join('');
+
+    let parsed;
+    try {
+      let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const start = clean.indexOf('{');
+      const end = clean.lastIndexOf('}');
+      if (start === -1 || end === -1) throw new Error('no braces');
+      parsed = JSON.parse(clean.slice(start, end + 1));
+    } catch {
+      console.error('Raw response:', text);
+      throw new Error('回應格式異常，請重試');
+    }
+
+    renderBlocks(parsed);
+    setSpinner(false);
+    setStatus('整理完成 ✓');
+
+  } catch (err) {
+    setSpinner(false);
+    setStatus('發生錯誤：' + err.message, true);
+  }
+
+  $('btn-generate').disabled = false;
+});
+
+function renderBlocks(data) {
+  const container = $('blocks-container');
+  container.innerHTML = '';
+  MARKETS.forEach((m, i) => {
+    const text = data[m.key] || '';
+    const block = document.createElement('div');
+    block.className = 'market-block';
+    block.style.animationDelay = `${i * 0.06}s`;
+    block.innerHTML = `
+      <div class="market-name">${m.label}</div>
+      <div class="market-content" id="content-${m.key}">${text}</div>
+      <textarea class="market-content-edit" id="edit-${m.key}" rows="6">${text}</textarea>
+      <div class="block-actions">
+        <button class="btn-tiny" onclick="toggleEdit('${m.key}')">編輯</button>
+        <button class="btn-tiny" onclick="saveEdit('${m.key}')">儲存</button>
+      </div>`;
+    container.appendChild(block);
+  });
+  $('output-section').classList.add('visible');
+  buildFinal();
+}
+
+function toggleEdit(key) {
+  const view = $('content-' + key), edit = $('edit-' + key);
+  const isEditing = edit.style.display === 'block';
+  view.style.display = isEditing ? 'block' : 'none';
+  edit.style.display = isEditing ? 'none' : 'block';
+  if (!isEditing) edit.value = view.textContent;
+}
+
+function saveEdit(key) {
+  const view = $('content-' + key), edit = $('edit-' + key);
+  view.textContent = edit.value;
+  view.style.display = 'block';
+  edit.style.display = 'none';
+  buildFinal();
+}
+
+function buildFinal() {
+  const paras = MARKETS.map(m => (($('content-' + m.key) || {}).textContent || '').trim()).filter(Boolean);
+  $('final-output').textContent = paras.join('\n\n');
+  $('final-output').classList.add('visible');
+}
+
+function buildHtmlForClipboard() {
+  const paras = MARKETS.map(m => {
+    const t = (($('content-' + m.key) || {}).textContent || '').trim();
+    if (!t) return '';
+    return `<p style="font-family:'微軟正黑體',sans-serif;font-size:12pt;line-height:1.8;margin:0 0 12pt 0;">${t}</p>`;
+  }).filter(Boolean);
+  return '<html><body>' + paras.join('') + '</body></html>';
+}
+
+$('btn-copy').addEventListener('click', async () => {
+  const msg = $('copied-msg');
+  try {
+    const htmlBlob = new Blob([buildHtmlForClipboard()], { type: 'text/html' });
+    const textBlob = new Blob([$('final-output').textContent], { type: 'text/plain' });
+    await navigator.clipboard.write([
+      new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+    ]);
+  } catch {
+    await navigator.clipboard.writeText($('final-output').textContent);
+  }
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 2000);
+});
+
+$('btn-clear').addEventListener('click', () => {
+  $('raw-input').value = '';
+  $('range-all').value = '';
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  $('trade-date').value = d.toISOString().slice(0, 10);
+  $('blocks-container').innerHTML = '';
+  $('final-output').textContent = '';
+  $('final-output').classList.remove('visible');
+  $('output-section').classList.remove('visible');
+  setStatus('');
+});
+</script>
+</body>
+</html>
