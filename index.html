@@ -10,71 +10,172 @@
 
   :root {
     --bg: #f4f1ed;
-    --surface: rgba(255,255,255,0.78);
+    --surface: rgba(255,255,255,0.8);
     --surface-hover: rgba(255,255,255,0.95);
     --border: rgba(0,0,0,0.05);
-    --border-hover: rgba(0,0,0,0.1);
+    --border-hover: rgba(0,0,0,0.12);
     --text: #1a1a1a;
     --text-dim: #777;
     --text-light: #aaa;
-    --shadow: 0 1px 3px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.025);
-    --shadow-hover: 0 4px 12px rgba(0,0,0,0.06), 0 16px 48px rgba(0,0,0,0.06);
+    --shadow: 0 1px 4px rgba(0,0,0,0.03), 0 6px 20px rgba(0,0,0,0.03);
+    --shadow-hover: 0 4px 14px rgba(0,0,0,0.07), 0 20px 56px rgba(0,0,0,0.07);
   }
 
   body {
     font-family: 'Inter', 'Noto Sans TC', -apple-system, sans-serif;
     color: var(--text);
     min-height: 100vh;
-    position: relative;
     background: var(--bg);
   }
 
-  /* Marble texture layers */
+  /* Marble */
   body::before {
-    content: '';
-    position: fixed; inset: 0; z-index: 0;
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='1200'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='6' seed='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.94 0 0 0 0 0.91 0 0 0 0 0.89 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
-    background-size: cover;
-    background-blend-mode: overlay;
+    content: ''; position: fixed; inset: 0; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='1200'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='6' seed='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.94 0 0 0 0 0.91 0 0 0 0 0.89 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
+    background-size: cover; background-blend-mode: overlay;
   }
-
   body::after {
-    content: '';
-    position: fixed; inset: 0; z-index: 0;
-    opacity: 0.08;
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='1000'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.004 0.012' numOctaves='3' seed='12' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0 0 0.4 0.7 0.4 0 0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)' fill='%23000'/%3E%3C/svg%3E");
+    content: ''; position: fixed; inset: 0; z-index: 0; opacity: 0.08; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='1000'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.004 0.012' numOctaves='3' seed='12' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0 0 0.4 0.7 0.4 0 0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)' fill='%23000'/%3E%3C/svg%3E");
     background-size: cover;
-    pointer-events: none;
   }
 
+  /* ===== LOGIN OVERLAY ===== */
+  #loginOverlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+  }
+
+  #loginOverlay::before {
+    content: ''; position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='1200'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='6' seed='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.94 0 0 0 0 0.91 0 0 0 0 0.89 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
+    background-size: cover; background-blend-mode: overlay;
+  }
+
+  .login-box {
+    position: relative; z-index: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 44px;
+    width: 420px;
+    max-width: 90vw;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  .login-box .login-diamond {
+    width: 10px; height: 10px;
+    background: var(--text);
+    transform: rotate(45deg);
+    margin: 0 auto 20px;
+  }
+
+  .login-box h2 {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 300;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+
+  .login-box h2 strong { font-weight: 600; }
+
+  .login-sub {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 36px;
+  }
+
+  .login-field {
+    margin-bottom: 18px;
+  }
+
+  .login-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .login-field input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 16px;
+    font-family: inherit;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.6);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .login-field input:focus {
+    border-color: rgba(0,0,0,0.25);
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+  }
+
+  .login-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: 10px;
+    background: var(--text);
+    color: #fff;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .login-btn:hover { opacity: 0.85; }
+
+  .login-error {
+    text-align: center;
+    font-size: 14px;
+    color: #c0392b;
+    margin-top: 16px;
+    min-height: 20px;
+  }
+
+  /* ===== MAIN CONTENT ===== */
   .container {
     position: relative; z-index: 1;
-    max-width: 920px;
+    max-width: 1060px;
     margin: 0 auto;
-    padding: 72px 24px 80px;
+    padding: 72px 28px 80px;
   }
 
-  /* Header */
-  header { margin-bottom: 52px; }
+  header { margin-bottom: 56px; }
 
   .header-top {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
 
   .logo-diamond {
-    width: 7px; height: 7px;
+    width: 8px; height: 8px;
     background: var(--text);
     transform: rotate(45deg);
     flex-shrink: 0;
   }
 
   .label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
     letter-spacing: 4px;
     text-transform: uppercase;
@@ -82,7 +183,7 @@
   }
 
   h1 {
-    font-size: clamp(30px, 5vw, 42px);
+    font-size: clamp(34px, 5.5vw, 50px);
     font-weight: 300;
     letter-spacing: -0.5px;
     line-height: 1.25;
@@ -90,32 +191,58 @@
 
   h1 strong { font-weight: 600; }
 
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .logout-btn {
+    font-size: 13px;
+    font-family: inherit;
+    padding: 8px 18px;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .logout-btn:hover {
+    background: rgba(0,0,0,0.04);
+    color: var(--text);
+  }
+
   .divider {
     width: 48px; height: 1px;
     background: var(--text);
-    margin: 20px 0 0;
+    margin: 22px 0 0;
     opacity: 0.18;
   }
 
   /* Grid */
   .tools-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
   }
 
   /* Card */
   .tool-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 26px 24px;
+    border-radius: 14px;
+    padding: 32px 28px;
     text-decoration: none;
     color: inherit;
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     box-shadow: var(--shadow);
@@ -134,10 +261,10 @@
     justify-content: space-between;
   }
 
-  .card-icon { font-size: 22px; line-height: 1; }
+  .card-icon { font-size: 28px; line-height: 1; }
 
   .card-tag {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 500;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -147,36 +274,36 @@
   }
 
   .card-title {
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 600;
     line-height: 1.35;
     letter-spacing: -0.2px;
   }
 
   .card-desc {
-    font-size: 13px;
+    font-size: 15px;
     color: var(--text-dim);
-    line-height: 1.65;
+    line-height: 1.7;
     flex: 1;
   }
 
   .card-arrow {
-    font-size: 14px;
+    font-size: 18px;
     color: var(--text-light);
     transition: transform 0.25s ease, color 0.25s ease;
     align-self: flex-end;
   }
 
   .tool-card:hover .card-arrow {
-    transform: translateX(4px);
+    transform: translateX(5px);
     color: var(--text);
   }
 
   /* Footer */
   footer {
-    margin-top: 60px;
+    margin-top: 64px;
     text-align: center;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-light);
     letter-spacing: 1px;
   }
@@ -184,19 +311,43 @@
   @media (max-width: 640px) {
     .container { padding: 48px 16px 60px; }
     .tools-grid { grid-template-columns: 1fr; }
-    header { margin-bottom: 36px; }
+    header { margin-bottom: 40px; }
+    .login-box { padding: 36px 24px; }
   }
 </style>
 </head>
 <body>
 
-<div class="container">
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="login-diamond"></div>
+    <h2>金融市場處<strong>工具集</strong></h2>
+    <p class="login-sub">請輸入帳號密碼登入</p>
+    <div class="login-field">
+      <label>帳號</label>
+      <input type="text" id="loginUser" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="login-field">
+      <label>密碼</label>
+      <input type="password" id="loginPass">
+    </div>
+    <button class="login-btn" onclick="doLogin()">登入</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="container" id="mainContent" style="display:none;">
   <header>
     <div class="header-top">
       <div class="logo-diamond"></div>
       <span class="label">Financial Market Tools</span>
     </div>
-    <h1>金融市場處<strong>工具集</strong></h1>
+    <div class="header-row">
+      <h1>金融市場處<strong>工具集</strong></h1>
+      <button class="logout-btn" onclick="doLogout()">登出</button>
+    </div>
     <div class="divider"></div>
   </header>
 
@@ -276,6 +427,47 @@
 
   <footer>Financial Markets Division · Internal Tools</footer>
 </div>
+
+<script>
+const HASH = 'b84c315212dd8df1783f06ec497fb6f5c7b284f57149dd9c8294d0d2ca9bd91c';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const h = await sha256(u + ':' + p);
+  if (h === HASH) {
+    sessionStorage.setItem('mkt_auth', '1');
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+  } else {
+    document.getElementById('loginError').textContent = '帳號或密碼錯誤';
+    document.getElementById('loginPass').value = '';
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('mkt_auth');
+  location.reload();
+}
+
+// Auto-login if session exists
+if (sessionStorage.getItem('mkt_auth') === '1') {
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginOverlay').style.display !== 'none') {
+    doLogin();
+  }
+});
+</script>
 
 </body>
 </html>
