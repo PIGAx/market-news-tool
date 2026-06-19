@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>警示標的分析工具</title>
+<script src="https://s3.tradingview.com/tv.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   SCREEN STYLES
+═══════════════════════════════════════════════════════════ */
+:root {
+  --bg:#f5f3ee; --surface:#fff; --card:#fafaf8; --border:#e0ddd5;
+  --accent:#b8860b; --accent2:#1a5276; --danger:#c0392b;
+  --text:#1a1a1a; --text2:#4a4a4a; --muted:#8a8578; --green:#27774e;
+  --cream:#f9f7f2; --sh:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Serif TC',serif;min-height:100vh;}
+.wrap{max-width:1020px;margin:0 auto;padding:32px 24px;}
+
+header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;border-bottom:2px solid var(--text);padding-bottom:18px;flex-wrap:wrap;gap:12px;}
+.logo-eye{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:.25em;text-transform:uppercase;margin-bottom:3px;}
+.logo-h1{font-family:'Crimson Pro',serif;font-size:26px;font-weight:700;letter-spacing:.02em;}
+.logo-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.hdr-r{text-align:right;}
+.date-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 12px;border-radius:4px;margin-bottom:8px;display:inline-block;}
+.api-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+.api-in{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;width:220px;outline:none;}
+.api-in:focus{border-color:var(--accent);}
+.api-link{color:var(--accent2);font-size:11px;text-decoration:none;font-family:'IBM Plex Mono',monospace;}
+.model-row{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:7px;flex-wrap:wrap;}
+.mpill{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.mpill.on{border-color:var(--accent);color:var(--accent);background:rgba(184,134,11,.08);font-weight:600;}
+.mpill.ok{border-color:var(--green);color:var(--green);}
+.mpill.bad{border-color:var(--danger);color:var(--danger);}
+.mtest-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--accent2);color:var(--accent2);background:transparent;cursor:pointer;}
+.mtest-btn:hover{background:var(--accent2);color:#fff;}
+
+.icard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden;box-shadow:var(--sh);}
+.icard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2),transparent);}
+.ilbl{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px;}
+.mode-row{display:flex;gap:8px;margin-bottom:14px;}
+.mbtn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;}
+.mbtn.on{border-color:var(--accent);color:var(--accent);background:rgba(184,134,11,.06);}
+.srow{display:flex;gap:10px;flex-wrap:wrap;}
+.tinput{flex:1;min-width:130px;background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:500;color:var(--text);letter-spacing:.08em;text-transform:uppercase;outline:none;}
+.tinput:focus{border-color:var(--accent);}
+.tinput::placeholder{color:var(--muted);font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;}
+.msel{background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:'Noto Serif TC',serif;font-size:14px;color:var(--text);outline:none;cursor:pointer;min-width:120px;}
+.gobtn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:12px 24px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;letter-spacing:.06em;cursor:pointer;}
+.gobtn:hover:not(:disabled){background:#d4a017;}
+.gobtn:disabled{opacity:.4;cursor:not-allowed;}
+.hint{font-size:11px;color:var(--muted);margin-top:9px;font-family:'IBM Plex Mono',monospace;}
+.btarea{width:100%;background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--text);outline:none;resize:vertical;min-height:110px;line-height:1.7;}
+.btarea:focus{border-color:var(--accent);}
+.btrow{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
+.btgobtn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px 22px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;letter-spacing:.06em;cursor:pointer;}
+.btgobtn:hover:not(:disabled){background:#d4a017;}
+.btgobtn:disabled{opacity:.4;cursor:not-allowed;}
+
+.status{display:none;border-radius:10px;padding:13px 17px;margin-bottom:14px;font-family:'IBM Plex Mono',monospace;font-size:12px;}
+.status.err{display:block;background:rgba(192,57,43,.06);border:1px solid rgba(192,57,43,.25);color:var(--danger);}
+.status.load{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);}
+.spin{width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.steps{display:none;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.step{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 11px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+.step.active{border-color:var(--accent);color:var(--accent);background:rgba(184,134,11,.06);}
+.step.done{border-color:var(--green);color:var(--green);}
+.bprog{display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:14px;}
+.bptitle{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;}
+.bpitem{display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:4px 0;}
+.bpdot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;}
+.bpdot.run{background:var(--accent);animation:pulse 1s infinite;}
+.bpdot.ok{background:var(--green);}
+.bpdot.fail{background:var(--danger);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.bpst{color:var(--muted);margin-left:auto;}
+
+.rblock{border:1px solid var(--border);border-radius:2px;overflow:hidden;margin-bottom:28px;background:var(--surface);box-shadow:0 4px 20px rgba(0,0,0,.08);}
+.rhdr{background:var(--surface);padding:20px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-bottom:2px solid var(--text);position:relative;}
+.rhdr::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent);}
+.rhl{padding-left:10px;}
+.rticker{font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:600;}
+.rname{font-size:14px;color:var(--text2);margin-top:2px;}
+.rbody{background:var(--surface);padding:24px 28px;}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:680px){.rgrid{grid-template-columns:1fr}}
+.rfull{grid-column:1/-1;}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 22px;}
+.plbl{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:.22em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;font-weight:600;}
+.plbl::after{content:'';flex:1;height:1px;background:var(--border);}
+.chwrap{position:relative;height:350px;border-radius:4px;overflow:hidden;border:1px solid var(--border);}
+.sbody{font-size:13.5px;line-height:1.9;color:var(--text2);}
+.nlist{display:flex;flex-direction:column;gap:8px;}
+.nitem{padding:12px 14px;background:var(--cream);border-radius:4px;border-left:3px solid var(--danger);}
+.nitem.neu{border-left-color:var(--border);}
+.ndate{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:4px;}
+.ntitle{font-size:13px;line-height:1.55;}
+.nsrc{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent2);margin-top:4px;}
+.rlist{list-style:none;display:flex;flex-direction:column;gap:10px;}
+.rlist li{display:flex;gap:10px;font-size:13px;line-height:1.7;color:var(--text2);}
+.rnum{flex-shrink:0;width:22px;height:22px;margin-top:2px;border-radius:3px;background:rgba(184,134,11,.08);border:1px solid rgba(184,134,11,.2);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent);font-weight:600;}
+.rfoot{background:var(--cream);border-top:1px solid var(--border);padding:12px 28px;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+.abtn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 16px;border-radius:4px;border:1px solid var(--border);color:var(--text2);background:var(--surface);cursor:pointer;}
+.abtn:hover{border-color:var(--accent);color:var(--accent);}
+.abtn.pri{border-color:var(--accent);color:var(--accent);font-weight:500;}
+.abtn.pri:hover{background:var(--accent);color:#fff;}
+.bsum{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.bsm{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+.bsm span{color:var(--text);}
+
+/* 浮動 PDF 快速按鈕 */
+.fab-pdf{position:fixed;bottom:28px;right:28px;z-index:9999;display:none;flex-direction:column;align-items:flex-end;gap:8px;}
+.fab-pdf.show{display:flex;}
+.fab-main{background:var(--accent);color:#fff;border:none;border-radius:50px;padding:13px 22px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.05em;cursor:pointer;box-shadow:0 4px 20px rgba(184,134,11,.35);display:flex;align-items:center;gap:8px;transition:all .18s;white-space:nowrap;}
+.fab-main:hover{background:#d4a017;transform:translateY(-2px);box-shadow:0 8px 28px rgba(184,134,11,.4);}
+.fab-hint{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:3px 10px;text-align:center;}
+
+/* 列印警語平常隱藏 */
+.pdisclaimer{display:none;}
+
+/* ═══════════════════════════════════════════════════════════
+   PRINT / PDF STYLES  —  簡約金融報告風格
+   目標：白底、黑字、金色 accent、極細線條分隔、高資訊密度
+═══════════════════════════════════════════════════════════ */
+@media print {
+  /* ── A4 頁面設定 ── */
+  @page {
+    size: A4 portrait;
+    margin: 16mm 18mm 20mm 18mm;
+  }
+
+  /* ── 隱藏操作 UI ── */
+  header, .icard, .status, .steps, .bprog,
+  .rfoot, .bsum, .fab-pdf { display: none !important; }
+
+  body {
+    background: #fff !important;
+    color: #1a1a1a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-family: 'Noto Serif TC', 'Noto Serif', serif;
+    font-size: 9.5pt;
+  }
+
+  .wrap { padding: 0 !important; max-width: 100% !important; }
+
+  /* ── 每份報告強制換頁 ── */
+  .rblock {
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    background: #fff !important;
+    page-break-after: always;
+    break-after: page;
+  }
+  .rblock:last-child { page-break-after: avoid; break-after: avoid; }
+
+  /* ════════════════════════════════
+     報告頭部：ticker 大字 + 雙線框
+  ════════════════════════════════ */
+  .rhdr {
+    padding: 0 0 10px 0 !important;
+    border: none !important;
+    border-bottom: none !important;
+    background: #fff !important;
+    display: block !important;
+    position: relative !important;
+  }
+  /* 頂部金色粗線 */
+  .rhdr::before {
+    content: '' !important;
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: 3px !important;
+    background: #b8860b !important;
+    margin-bottom: 10px !important;
+  }
+  /* 底部黑色細線 */
+  .rhdr::after {
+    content: '' !important;
+    display: block !important;
+    width: 100% !important;
+    height: 1px !important;
+    background: #1a1a1a !important;
+    margin-top: 10px !important;
+  }
+  .rhl { padding-left: 0 !important; }
+  .rticker {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 28pt !important;
+    font-weight: 700 !important;
+    color: #1a1a1a !important;
+    letter-spacing: .03em !important;
+    line-height: 1.1 !important;
+  }
+  .rname {
+    font-family: 'Noto Serif TC', serif !important;
+    font-size: 9.5pt !important;
+    color: #4a4a4a !important;
+    margin-top: 4px !important;
+    font-weight: 400 !important;
+    letter-spacing: .01em !important;
+  }
+
+  /* ════════════════════════════════
+     報告主體
+  ════════════════════════════════ */
+  .rbody {
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  .rgrid {
+    display: block !important; /* 單欄，確保每 section 全寬 */
+  }
+  .rfull { grid-column: unset !important; }
+
+  /* ── Panel：只用頂部細線分隔，無邊框無背景 ── */
+  .panel {
+    background: #fff !important;
+    border: none !important;
+    border-top: 0.5pt solid #c8c4ba !important;
+    border-radius: 0 !important;
+    padding: 9pt 0 10pt 0 !important;
+    margin: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* ── Panel 標籤 ── */
+  .plbl {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 6.5pt !important;
+    color: #b8860b !important;
+    letter-spacing: .32em !important;
+    text-transform: uppercase !important;
+    margin-bottom: 7pt !important;
+    font-weight: 700 !important;
+    display: block !important; /* 移除 flex，避免線條撐寬 */
+  }
+  .plbl::after { display: none !important; }
+
+  /* ── 圖表區塊：保留 iframe，不切頁 ── */
+  .chwrap {
+    height: 200pt !important;
+    min-height: 200pt !important;
+    border: 0.5pt solid #c8c4ba !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    background: #fff !important;
+    display: block !important;
+  }
+  .chwrap iframe {
+    width: 100% !important;
+    height: 200pt !important;
+    border: none !important;
+    display: block !important;
+  }
+
+  /* ── 內文 ── */
+  .sbody {
+    font-size: 9.5pt !important;
+    line-height: 1.8 !important;
+    color: #1a1a1a !important;
+    font-family: 'Noto Serif TC', serif !important;
+  }
+
+  /* ── 新聞清單 ── */
+  .nlist { gap: 5pt !important; display: flex !important; flex-direction: column !important; }
+  .nitem {
+    background: #fff !important;
+    border-radius: 0 !important;
+    border-left: 2pt solid #c0392b !important;
+    border-top: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    padding: 4pt 8pt !important;
+    break-inside: avoid !important;
+  }
+  .nitem.neu { border-left-color: #bbb !important; }
+  .ndate {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 7pt !important;
+    color: #8a8578 !important;
+    margin-bottom: 2pt !important;
+  }
+  .ntitle {
+    font-size: 9pt !important;
+    line-height: 1.5 !important;
+    color: #1a1a1a !important;
+    font-family: 'Noto Serif TC', serif !important;
+  }
+  .nsrc {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 7pt !important;
+    color: #1a5276 !important;
+    margin-top: 2pt !important;
+  }
+
+  /* ── 風險清單 ── */
+  .rlist { gap: 6pt !important; }
+  .rlist li { font-size: 9.5pt !important; line-height: 1.7 !important; gap: 8pt !important; }
+  .rnum {
+    width: 18pt !important; height: 18pt !important;
+    background: transparent !important;
+    border: 1pt solid #b8860b !important;
+    color: #b8860b !important;
+    font-size: 8pt !important;
+    border-radius: 2pt !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* ════════════════════════════════
+     列印警語 Footer
+  ════════════════════════════════ */
+  .pdisclaimer {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-top: 0.5pt solid #1a1a1a !important;
+    margin-top: 12pt !important;
+    padding-top: 8pt !important;
+    background: #fff !important;
+    gap: 16pt !important;
+  }
+  .pdisclaimer .pd-left {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2pt !important;
+  }
+  .pdisclaimer .pd-dept {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 7pt !important;
+    color: #b8860b !important;
+    letter-spacing: .2em !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+  }
+  .pdisclaimer .pd-warn {
+    font-family: 'Noto Serif TC', serif !important;
+    font-size: 7.5pt !important;
+    color: #4a4a4a !important;
+  }
+  .pdisclaimer .pd-date {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 7pt !important;
+    color: #8a8578 !important;
+    white-space: nowrap !important;
+    text-align: right !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- 浮動 PDF 快速按鈕 -->
+<div class="fab-pdf" id="fabPdf">
+  <div class="fab-hint">列印 → 目的地選「另存為 PDF」</div>
+  <button class="fab-main" onclick="window.print()">
+    <span style="font-size:16px;">🖨️</span> 快速匯出 PDF
+  </button>
+</div>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="logo-eye">Financial Product &middot; PM Tool</div>
+      <div class="logo-h1">警示標的分析 <span style="font-size:14px;color:var(--accent2);vertical-align:middle;">[Powered by Gemini &amp; TradingView]</span></div>
+      <div class="logo-sub">即時 Google 搜尋 &amp; AI 分析 &middot; 支援批次多標的 &middot; 專業走勢圖</div>
+    </div>
+    <div class="hdr-r">
+      <div class="date-tag" id="dateTag"></div>
+      <div class="api-row">
+        <input type="password" id="apiKeyIn" class="api-in" placeholder="在此貼上 Gemini API Key" autocomplete="off">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="api-link">→ 免費獲取</a>
+      </div>
+      <div class="model-row" id="modelRow">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;">MODEL:</span>
+        <button class="mpill on" data-model="gemini-2.5-flash" onclick="selectModel(this)">2.5 Flash ★</button>
+        <button class="mpill" data-model="gemini-2.5-pro" onclick="selectModel(this)">2.5 Pro</button>
+        <button class="mpill" data-model="gemini-2.5-flash-lite" onclick="selectModel(this)">2.5 Lite</button>
+        <button class="mtest-btn" id="testBtn" onclick="testConn()">連線測試</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="icard">
+    <div class="ilbl">分析模式</div>
+    <div class="mode-row">
+      <button class="mbtn on" id="modeSingle" onclick="setMode('single')">單一標的</button>
+      <button class="mbtn" id="modeBatch" onclick="setMode('batch')">批次多標的</button>
+    </div>
+    <div id="singleArea">
+      <div class="srow">
+        <input class="tinput" id="tickerIn" placeholder="例如：RBLX 或 NVDA" maxlength="10" autocomplete="off"/>
+        <select class="msel" id="mktSel">
+          <option value="US">🇺🇸 US 美股</option>
+          <option value="JP">🇯🇵 JP 日股</option>
+        </select>
+        <button class="gobtn" id="goBtn" onclick="runSingle()">ANALYZE →</button>
+      </div>
+      <div class="hint">美股：RBLX、NVDA、AAPL　｜　日股：7203、9984、6758</div>
+    </div>
+    <div id="batchArea" style="display:none">
+      <textarea class="btarea" id="batchIn" placeholder="每行一個標的，格式：代碼,市場&#10;&#10;NVDA,US&#10;SOFI,US&#10;7013,JP"></textarea>
+      <div class="btrow">
+        <button class="btgobtn" id="batchGoBtn" onclick="runBatch()">批次分析 →</button>
+        <span class="hint">每行格式：代碼,市場（US 或 JP）｜建議一次不超過 5 支</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div class="steps" id="steps">
+    <div class="step" id="s1">① 連結 Google Search</div>
+    <div class="step" id="s2">② 取得即時資料</div>
+    <div class="step" id="s3">③ 整合歸納分析</div>
+    <div class="step" id="s4">④ 產出報告</div>
+  </div>
+  <div class="bprog" id="bprog">
+    <div class="bptitle">批次分析進度</div>
+    <div id="bpItems"></div>
+  </div>
+  <div id="resultsArea"></div>
+</div>
+
+<script>
+// ── 初始化 ────────────────────────────────────────────────────────────────
+document.getElementById('dateTag').textContent = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'});
+document.getElementById('tickerIn').addEventListener('keydown', function(e){ if(e.key==='Enter') runSingle(); });
+var savedKey = localStorage.getItem('gemini_api_key');
+if(savedKey) document.getElementById('apiKeyIn').value = savedKey;
+
+function setMode(m) {
+  document.getElementById('modeSingle').className = 'mbtn' + (m==='single'?' on':'');
+  document.getElementById('modeBatch').className  = 'mbtn' + (m==='batch' ?' on':'');
+  document.getElementById('singleArea').style.display = m==='single'?'block':'none';
+  document.getElementById('batchArea').style.display  = m==='batch' ?'block':'none';
+}
+
+function setStatus(type, msg) {
+  var el = document.getElementById('status');
+  el.className = 'status ' + type;
+  if(type==='load') el.innerHTML = '<div class="spin"></div><span>'+msg+'</span>';
+  else el.textContent = '\u26a0  '+msg;
+  var dis = (type==='load');
+  ['goBtn','batchGoBtn'].forEach(function(id){ var b=document.getElementById(id); if(b) b.disabled=dis; });
+}
+function clearStatus() {
+  document.getElementById('status').className = 'status';
+  ['goBtn','batchGoBtn'].forEach(function(id){ var b=document.getElementById(id); if(b) b.disabled=false; });
+}
+function stepMark(id,cls){ var e=document.getElementById(id); if(e) e.className='step '+cls; }
+function showSteps(){ document.getElementById('steps').style.display='flex'; ['s1','s2','s3','s4'].forEach(function(s){stepMark(s,'');}); }
+function showFab(){ var f=document.getElementById('fabPdf'); if(f) f.className='fab-pdf show'; }
+
+// ── 單一分析 ──────────────────────────────────────────────────────────────
+function runSingle() {
+  var ticker = document.getElementById('tickerIn').value.trim().toUpperCase();
+  var market = document.getElementById('mktSel').value;
+  if(!ticker){ setStatus('err','請輸入股票代碼'); return; }
+  clearStatus(); showSteps();
+  document.getElementById('bprog').style.display='none';
+  document.getElementById('resultsArea').innerHTML='';
+  setStatus('load','正在分析 '+ticker+'，使用 Google 搜尋最新資訊…');
+  stepMark('s1','active');
+  fetchAnalysis(ticker, market).then(function(data) {
+    stepMark('s1','done'); stepMark('s2','done'); stepMark('s3','done'); stepMark('s4','active');
+    var block = buildBlock(ticker, market, data, 0);
+    document.getElementById('resultsArea').appendChild(block);
+    drawChart('ch_'+ticker+'_0', ticker, market);
+    showFab();
+    stepMark('s4','done');
+    clearStatus();
+  }).catch(function(e) {
+    clearStatus(); setStatus('err', e.message);
+  });
+}
+
+// ── 批次分析 ──────────────────────────────────────────────────────────────
+function runBatch() {
+  var raw = document.getElementById('batchIn').value.trim();
+  if(!raw){ setStatus('err','請輸入標的列表'); return; }
+  var tickers = raw.split('\n').map(function(l){return l.trim();}).filter(Boolean).map(function(l){
+    var p=l.split(/[,，\s]+/);
+    return {ticker:p[0].toUpperCase(), market:(p[1]||'US').toUpperCase()};
+  }).filter(function(x){return x.ticker;});
+  if(!tickers.length){ setStatus('err','格式有誤'); return; }
+  if(tickers.length>8){ setStatus('err','一次最多 8 支'); return; }
+  clearStatus();
+  document.getElementById('steps').style.display='none';
+  document.getElementById('resultsArea').innerHTML='';
+  var bprog=document.getElementById('bprog');
+  var bpItems=document.getElementById('bpItems');
+  bpItems.innerHTML='';
+  tickers.forEach(function(t){
+    var d=document.createElement('div'); d.className='bpitem'; d.id='bpi_'+t.ticker;
+    d.innerHTML='<div class="bpdot" id="bpd_'+t.ticker+'"></div><span>'+t.ticker+'</span><span class="bpst" id="bps_'+t.ticker+'">等待中</span>';
+    bpItems.appendChild(d);
+  });
+  bprog.style.display='block';
+  var results=[];
+  var i=0;
+  function doNext() {
+    if(i>=tickers.length){ finishBatch(results, tickers.length); return; }
+    var t=tickers[i]; i++;
+    document.getElementById('bpd_'+t.ticker).className='bpdot run';
+    document.getElementById('bps_'+t.ticker).textContent='分析中…';
+    setStatus('load','正在分析 '+t.ticker+'（'+i+'/'+tickers.length+'）…');
+    fetchAnalysis(t.ticker, t.market).then(function(data){
+      results.push({ticker:t.ticker, market:t.market, data:data});
+      document.getElementById('bpd_'+t.ticker).className='bpdot ok';
+      document.getElementById('bps_'+t.ticker).textContent='✓ 完成';
+      doNext();
+    }).catch(function(e){
+      results.push({ticker:t.ticker, market:t.market, data:null, error:e.message});
+      document.getElementById('bpd_'+t.ticker).className='bpdot fail';
+      document.getElementById('bps_'+t.ticker).textContent='✗ 失敗';
+      doNext();
+    });
+  }
+  doNext();
+}
+
+function finishBatch(results, total) {
+  clearStatus();
+  var area=document.getElementById('resultsArea');
+  var done=results.filter(function(r){return r.data;}).length;
+  var sum=document.createElement('div'); sum.className='bsum';
+  sum.innerHTML='<div class="bsm">批次完成：<span>'+done+'/'+total+' 支</span>　產出時間：<span>'+new Date().toLocaleString('zh-TW')+'</span></div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+    '<button class="abtn" onclick="doAllCopy(this)">📋 複製全部報告</button>'+
+    '<button class="abtn pri" onclick="window.print()">🖨️ 匯出全部 PDF</button>'+
+    '</div>';
+  area.appendChild(sum);
+  showFab();
+  results.forEach(function(r,idx){
+    if(!r.data){
+      var el=document.createElement('div');
+      el.style.cssText='background:rgba(192,57,43,.05);border:1px solid rgba(192,57,43,.2);border-radius:4px;padding:14px 18px;font-family:IBM Plex Mono,monospace;font-size:12px;color:#c0392b;margin-bottom:8px;';
+      el.textContent='✗ '+r.ticker+' 分析失敗：'+r.error; area.appendChild(el); return;
+    }
+    var block=buildBlock(r.ticker, r.market, r.data, idx);
+    area.appendChild(block);
+    setTimeout(function(){ drawChart('ch_'+r.ticker+'_'+idx, r.ticker, r.market); }, 150*idx);
+  });
+}
+
+// ── Gemini API ────────────────────────────────────────────────────────────
+function fetchAnalysis(ticker, market) {
+  var apiKey = document.getElementById('apiKeyIn').value.trim();
+  if(!apiKey) return Promise.reject(new Error('請先輸入 Gemini API Key'));
+  localStorage.setItem('gemini_api_key', apiKey);
+  var mktName = market==='JP'?'日本東證':'美股NYSE/NASDAQ';
+  var today = new Date().toISOString().slice(0,10);
+  var prompt =
+    '你是嚴謹的專業金融分析師，負責協助結構型商品 PM 整理客戶持倉警示說明。\n'+
+    '請使用 Google Search 搜尋最新資訊，並嚴格以繁體中文回覆。\n\n'+
+    '當前標的：'+ticker+'（'+mktName+'）\n今日：'+today+'\n\n'+
+    '== 新聞來源白名單（嚴格執行，只能引用這些媒體）==\n'+
+    'Reuters、Bloomberg、CNBC、Yahoo Finance、CNN Business、BBC News、WSJ、FED官方聲明、CME FedWatch\n\n'+
+    '== 標題品質要求 ==\n'+
+    '✓ 描述具體事件（財報、評等異動、法規、合約、管理層異動等）\n'+
+    '✗ 禁止：農場問句標題、引誘點擊字眼\n'+
+    '找不到合格新聞時 latestNews 設為空陣列。\n\n'+
+    '== 回傳純 JSON（不含任何markdown）==\n'+
+    '{"companyName":"公司中文全名（含英文原名）","marketContext":"市場背景100-150字完整段落","newsAnalysis":"主要新聞摘要分析250-350字，連貫敘事，不用條列式","riskWarnings":["風險1（25-40字完整句）","風險2","風險3"],"clientSummary":"總結150-200字完整段落","latestNews":[{"date":"YYYY-MM-DD","title":"陳述句標題","source":"媒體名","isNegative":true}]}\n'+
+    'latestNews 按日期由新到舊，source 只能填白名單媒體名稱。';
+  var modelId = window._selectedModel || 'gemini-2.5-flash';
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/'+modelId+':generateContent?key='+apiKey;
+  return fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}], tools:[{googleSearch:{}}]})
+  }).then(function(res){
+    if(!res.ok) return res.text().then(function(t){
+      var msg=t; try{msg=JSON.parse(t).error.message||t;}catch(e){}
+      if(msg.indexOf('API key not valid')>=0) throw new Error('API Key 無效，請確認金鑰');
+      if(res.status===503||msg.indexOf('high demand')>=0||msg.indexOf('overloaded')>=0)
+        throw new Error('模型 '+modelId+' 流量過高 (503)，請切換到其他模型後重試');
+      if(res.status===429) throw new Error('請求頻率過高，請稍等幾秒後重試');
+      throw new Error('API 錯誤 '+res.status+'：'+msg.slice(0,100));
+    });
+    return res.json();
+  }).then(function(d){
+    var parts=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[];
+    var raw=parts.filter(function(p){return p.text;}).map(function(p){return p.text;}).join('\n');
+    var m=raw.match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('AI 回傳格式解析失敗，請重試');
+    var parsed=JSON.parse(m[0]);
+    if(parsed.latestNews&&parsed.latestNews.length>1){
+      parsed.latestNews.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+    }
+    return parsed;
+  });
+}
+
+// ── 建立報告區塊 ──────────────────────────────────────────────────────────
+function buildBlock(ticker, market, d, idx) {
+  var block=document.createElement('div');
+  block.className='rblock';
+  block.id='rb_'+ticker+'_'+idx;
+  block._rd={ticker:ticker, market:market, d:d};
+
+  var newsHtml='';
+  (d.latestNews||[]).forEach(function(n){
+    newsHtml+='<div class="nitem'+(n.isNegative?'':' neu')+'">';
+    newsHtml+='<div class="ndate">'+(n.date||'')+'</div>';
+    newsHtml+='<div class="ntitle">'+(n.title||'')+'</div>';
+    newsHtml+='<div class="nsrc">'+(n.source||'')+'</div></div>';
+  });
+
+  var riskHtml='';
+  var risks=d.riskWarnings||[];
+  if(risks.length){
+    risks.forEach(function(r){ riskHtml+='<li><span class="rnum">!</span><span>'+cleanStr(r)+'</span></li>'; });
+    riskHtml='<ul class="rlist">'+riskHtml+'</ul>';
+  }
+
+  var chId='ch_'+ticker+'_'+idx;
+  var todayStr=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
+
+  var html='';
+  // Header
+  html+='<div class="rhdr"><div class="rhl">';
+  html+='<div class="rticker">'+ticker+(market==='JP'?' <span style="font-size:.45em;font-weight:400;color:#8a8578;">TSE</span>':'')+'</div>';
+  html+='<div class="rname">'+(d.companyName||ticker)+'</div>';
+  html+='</div></div>';
+
+  // Body
+  html+='<div class="rbody"><div class="rgrid">';
+
+  // Chart
+  html+='<div class="panel rfull">';
+  html+='<div class="plbl">近一年股價走勢 &nbsp;·&nbsp; TradingView</div>';
+  html+='<div class="chwrap" id="'+chId+'_c"></div>';
+  html+='</div>';
+
+  // Market context
+  html+='<div class="panel rfull">';
+  html+='<div class="plbl">市場背景</div>';
+  html+='<div class="sbody">'+(d.marketContext||'—')+'</div>';
+  html+='</div>';
+
+  // News
+  if(newsHtml){
+    html+='<div class="panel rfull">';
+    html+='<div class="plbl">最新相關新聞</div>';
+    html+='<div class="nlist">'+newsHtml+'</div>';
+    html+='</div>';
+  }
+
+  // Analysis
+  html+='<div class="panel rfull">';
+  html+='<div class="plbl">主要新聞摘要分析</div>';
+  html+='<div class="sbody">'+(d.newsAnalysis||'—')+'</div>';
+  html+='</div>';
+
+  // Risk
+  if(riskHtml){
+    html+='<div class="panel rfull">';
+    html+='<div class="plbl">未來風險警示</div>';
+    html+=riskHtml;
+    html+='</div>';
+  }
+
+  // Summary
+  html+='<div class="panel rfull">';
+  html+='<div class="plbl">總結</div>';
+  html+='<div class="sbody">'+(d.clientSummary||'無詳細摘要')+'</div>';
+  html+='</div>';
+
+  html+='</div></div>';
+
+  // 列印警語（@media print 才顯示）
+  html+='<div class="pdisclaimer">';
+  html+='<div class="pd-left">';
+  html+='<div class="pd-dept">銀行財務行銷部 &nbsp;·&nbsp; Financial Markets Division</div>';
+  html+='<div class="pd-warn">本行內部教育訓練資料，請勿外流，且不得將本教材加以複製或轉載。</div>';
+  html+='</div>';
+  html+='<div class="pd-date">'+todayStr+'</div>';
+  html+='</div>';
+
+  // Screen footer
+  html+='<div class="rfoot">';
+  html+='<div style="flex:1;font-size:10px;color:var(--muted);line-height:1.6;">';
+  html+='<div style="font-weight:600;margin-bottom:2px;">銀行財務行銷部</div>';
+  html+='<div>本行內部教育訓練資料，請勿外流，且不得將本教材加以複製或轉載。</div>';
+  html+='</div>';
+  html+='<button class="abtn" onclick="doCopy(\''+ticker+'\',\''+market+'\','+idx+')">📋 複製文字報告</button>';
+  html+='<button class="abtn pri" onclick="window.print()">🖨️ 匯出 PDF</button>';
+  html+='</div>';
+
+  block.innerHTML=html;
+  return block;
+}
+
+// ── TradingView ───────────────────────────────────────────────────────────
+function getTvSymbol(ticker, market){
+  return market==='JP'?'TYO:'+ticker:ticker;
+}
+function drawChart(chId, ticker, market){
+  var el=document.getElementById(chId+'_c');
+  if(!el) return;
+  el.innerHTML='';
+  new TradingView.widget({
+    autosize:true, symbol:getTvSymbol(ticker,market),
+    interval:'W', range:'12M', timezone:'Asia/Taipei',
+    theme:'light', style:'3', locale:'zh_TW',
+    enable_publishing:false, backgroundColor:'#fafaf8',
+    gridColor:'rgba(0,0,0,0.04)', hide_top_toolbar:false,
+    hide_legend:false, save_image:false, container_id:el.id
+  });
+}
+
+// ── 文字報告 ──────────────────────────────────────────────────────────────
+function buildReportText(ticker, market, d){
+  var ts=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'numeric',day:'numeric'});
+  var mkt=market==='JP'?'日股 東證':'美股 NYSE/NASDAQ';
+  var news=(d.latestNews||[]).map(function(n){return '\u30fb['+n.date+'] '+n.title+'\uff08'+n.source+'\uff09';}).join('\n');
+  var risks=(d.riskWarnings||[]).map(function(r){return '\u30fb'+cleanStr(r);}).join('\n');
+  return '\u300b'+ts+' 警示標的說明\u300a\n'+
+    '標的：'+ticker+'\uff08'+(d.companyName||ticker)+'\uff09\n市場：'+mkt+'\n\n'+
+    '\u3010市場背景\u3011\n'+(d.marketContext||'')+'\n\n'+
+    '\u3010最新相關新聞\u3011\n'+news+'\n\n'+
+    '\u3010主要新聞摘要分析\u3011\n'+(d.newsAnalysis||'')+'\n\n'+
+    '\u3010未來風險警示\u3011\n'+risks+'\n\n'+
+    '\u3010總結\u3011\n'+(d.clientSummary||'')+'\n\n'+
+    '銀行財務行銷部\n本行內部教育訓練資料，請勿外流，且不得將本教材加以複製或轉載。';
+}
+
+function doCopy(ticker, market, idx){
+  var block=document.getElementById('rb_'+ticker+'_'+idx);
+  if(!block||!block._rd) return;
+  var r=block._rd;
+  writeClip(buildReportText(r.ticker,r.market,r.d), ticker+' 報告已複製');
+}
+function doAllCopy(btn){
+  btn.disabled=true; var orig=btn.textContent; btn.textContent='處理中…';
+  var parts=[];
+  document.querySelectorAll('.rblock').forEach(function(b){
+    if(b._rd) parts.push(buildReportText(b._rd.ticker,b._rd.market,b._rd.d));
+  });
+  var divider='\n\n'+'\u2501'.repeat(50)+'\n\n';
+  var text=parts.join(divider);
+  writeClip(text, '已複製 '+parts.length+' 支報告').then(function(){
+    btn.textContent='\u2713 已複製 '+parts.length+' 支';
+    setTimeout(function(){btn.textContent=orig;btn.disabled=false;},3000);
+  });
+}
+function writeClip(text, msg){
+  if(navigator.clipboard){
+    return navigator.clipboard.writeText(text).then(function(){alert('\u2713 '+msg);}).catch(function(){fbClip(text,msg);});
+  }
+  fbClip(text,msg);
+  return Promise.resolve();
+}
+function fbClip(text,msg){
+  var ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  alert('\u2713 '+msg);
+}
+
+// ── 模型切換 ──────────────────────────────────────────────────────────────
+window._selectedModel='gemini-2.5-flash';
+function selectModel(btn){
+  window._selectedModel=btn.getAttribute('data-model');
+  document.querySelectorAll('.mpill').forEach(function(b){ b.className='mpill'+(b===btn?' on':''); });
+  var tb=document.getElementById('testBtn');
+  if(tb){ tb.textContent='連線測試'; tb.disabled=false; }
+}
+function testConn(){
+  var apiKey=document.getElementById('apiKeyIn').value.trim();
+  if(!apiKey){ alert('請先輸入 API Key'); return; }
+  var modelId=window._selectedModel||'gemini-2.5-flash';
+  var tb=document.getElementById('testBtn');
+  tb.textContent='測試中…'; tb.disabled=true;
+  var url='https://generativelanguage.googleapis.com/v1beta/models/'+modelId+':generateContent?key='+apiKey;
+  var t0=Date.now();
+  fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{text:'Reply with exactly: OK'}]}]})
+  }).then(function(res){
+    var ms=Date.now()-t0;
+    if(!res.ok) return res.json().then(function(e){ throw new Error((e.error&&e.error.message)||'HTTP '+res.status); });
+    return res.json().then(function(){
+      tb.textContent='\u2713 '+ms+'ms';
+      tb.style.borderColor='#27774e'; tb.style.color='#27774e';
+      document.querySelectorAll('.mpill').forEach(function(b){
+        if(b.getAttribute('data-model')===modelId) b.className='mpill on ok';
+      });
+      setTimeout(function(){ tb.textContent='連線測試'; tb.style.borderColor=''; tb.style.color=''; tb.disabled=false; },4000);
+    });
+  }).catch(function(e){
+    tb.textContent='\u2717 失敗';
+    tb.style.borderColor='#c0392b'; tb.style.color='#c0392b';
+    document.querySelectorAll('.mpill').forEach(function(b){
+      if(b.getAttribute('data-model')===modelId) b.className='mpill on bad';
+    });
+    setTimeout(function(){ tb.textContent='連線測試'; tb.style.borderColor=''; tb.style.color=''; tb.disabled=false; },4000);
+    alert('測試失敗：'+e.message+'\n\n請切換到其他模型或確認 API Key 是否正確。');
+  });
+}
+
+function cleanStr(s){ return (s||'').replace(/^(原因[一二三四五六]|\d+)[\.、：:\s]*/,'').replace(/^[・·•]\s*/,''); }
+</script>
+</body>
+</html>

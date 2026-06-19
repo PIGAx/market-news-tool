@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FCN Key單工具 · 永豐金融市場處</title>
+<style>
+:root{
+  --bg:#f5f6f8;--surface:#fff;--surface2:#f0f2f5;
+  --border:#dde1e9;--border2:#c8cdd8;
+  --accent:#2563eb;--accent-h:#1d4ed8;--purple:#7c3aed;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-br:#bbf7d0;
+  --red:#dc2626;--red-bg:#fef2f2;--red-br:#fecaca;
+  --yellow:#d97706;--yellow-bg:#fffbeb;--yellow-br:#fde68a;
+  --blue-bg:#eff6ff;--blue-br:#bfdbfe;
+  --text:#111827;--text2:#4b5563;--text3:#9ca3af;
+  --mono:'Courier New',monospace;
+  --sans:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --r:8px;--sh:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.5;overflow:hidden}
+
+/* ── TOP BAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:50px;position:relative;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px}
+.brand-name{font-size:14px;font-weight:700}
+.brand-sub{font-size:11px;color:var(--text3)}
+.topbar-right{display:flex;gap:6px;align-items:center}
+
+/* ── TOAST AREA (below topbar) ── */
+.toast-area{position:fixed;top:50px;left:0;right:0;z-index:999;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 20px}
+.toast-msg{pointer-events:auto;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:toastIn .2s ease;display:flex;align-items:center;gap:8px;max-width:500px}
+.toast-msg.success{background:#fff;border:1px solid var(--green-br);color:var(--green)}
+.toast-msg.error  {background:#fff;border:1px solid var(--red-br);  color:var(--red)}
+.toast-msg.info   {background:#fff;border:1px solid var(--blue-br);  color:var(--accent)}
+.toast-msg.warning{background:#fff;border:1px solid var(--yellow-br);color:var(--yellow)}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(-6px)}}
+
+/* ── LAYOUT (resizable) ── */
+.layout{display:flex;height:calc(100vh - 50px);overflow:hidden}
+.left-panel{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;width:300px;min-width:220px;max-width:520px}
+.resizer{width:5px;cursor:col-resize;background:transparent;flex-shrink:0;transition:background .15s;position:relative;z-index:10}
+.resizer:hover,.resizer.dragging{background:var(--accent)}
+.resizer::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:1px;height:40px;background:var(--border2);border-radius:2px}
+.right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);min-width:0}
+
+/* ── BUTTONS ── */
+.btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;white-space:nowrap;font-family:var(--sans)}
+.btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-h);border-color:var(--accent-h);color:#fff}
+.btn-danger-ol{border-color:#fca5a5;color:var(--red);background:var(--red-bg)}
+.btn-danger-ol:hover{border-color:var(--red);background:#fee2e2}
+.btn-green{background:var(--green);border-color:var(--green);color:#fff}
+.btn-green:hover{background:#15803d;border-color:#15803d;color:#fff}
+.btn-green:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── LEFT TABS ── */
+.panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
+.tab{flex:1;padding:10px 8px;text-align:center;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;transition:all .15s;font-family:var(--sans)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--surface)}
+.tab-content{flex:1;overflow-y:auto;padding:14px;display:none}
+.tab-content.active{display:block}
+
+/* ── SECTION LABEL ── */
+.slabel{font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--text3);text-transform:uppercase;margin-bottom:6px}
+
+/* ── PROVIDER TOGGLE ── */
+.provider-toggle{display:flex;gap:4px;margin-bottom:12px;background:var(--surface2);border-radius:7px;padding:3px;border:1px solid var(--border)}
+.provider-btn{flex:1;padding:6px;border-radius:5px;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.provider-btn.active{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.model-pills{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.model-pill{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.model-pill.active{background:var(--blue-bg);border-color:var(--accent);color:var(--accent)}
+
+/* ── FORM INPUTS ── */
+.fi,.email-ta{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 10px;font-size:12px;outline:none;font-family:var(--sans);transition:border-color .15s,box-shadow .15s;width:100%}
+.fi:focus,.email-ta:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.fi.need{border-color:#fbbf24;background:var(--yellow-bg)}
+.fi.auto-filled{border-color:var(--accent);background:var(--blue-bg);color:var(--accent);font-weight:600}
+.email-ta{resize:vertical;min-height:100px;margin-bottom:10px;font-family:var(--mono);font-size:11px;line-height:1.6}
+.input-row{display:flex;gap:6px;margin-bottom:10px}
+.input-row .fi{flex:1;font-family:var(--mono);font-size:11px}
+
+/* ── STATUS BOX (inline) ── */
+.sbox{display:none;padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:10px;align-items:center;gap:7px}
+.sbox.loading{display:flex;background:var(--blue-bg);color:var(--accent);border:1px solid var(--blue-br)}
+.sbox.success{display:flex;background:var(--green-bg);color:var(--green);border:1px solid var(--green-br)}
+.sbox.error  {display:flex;background:var(--red-bg);  color:var(--red);  border:1px solid var(--red-br)}
+.spinner{width:13px;height:13px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── DROP ZONE ── */
+.dz{border:2px dashed var(--border2);border-radius:var(--r);padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:10px;position:relative;background:var(--surface2)}
+.dz:hover,.dz.over{border-color:var(--accent);background:var(--blue-bg)}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.dz-icon{font-size:22px;margin-bottom:5px}
+.dz-label{color:var(--text2);font-size:12px;font-weight:500}
+.dz-sub{color:var(--text3);font-size:11px;margin-top:3px}
+
+/* ── PARSE BTN ── */
+.parse-btn{width:100%;padding:9px;border:none;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;margin-bottom:12px;font-family:var(--sans)}
+.parse-btn:hover{opacity:.88}
+.parse-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── RESULT CARDS ── */
+.result-cards{display:flex;flex-direction:column;gap:7px}
+.rc{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;cursor:pointer;transition:all .15s;position:relative}
+.rc:hover{border-color:var(--accent);background:var(--blue-bg)}
+.rc-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rc-id{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent)}
+.rc-ccy{font-size:11px;color:var(--text2);background:var(--surface);padding:2px 7px;border-radius:10px;border:1px solid var(--border)}
+.rc-name{color:var(--text2);font-size:11px;margin-top:3px}
+.rc-unds{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.sbadge{background:var(--surface);border:1px solid var(--border);padding:2px 7px;border-radius:4px;font-size:10px;font-family:var(--mono);color:var(--text2);font-weight:600}
+.rc-dates{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.dbadge{background:var(--blue-bg);border:1px solid var(--blue-br);padding:1px 6px;border-radius:4px;font-size:10px;color:var(--accent);font-family:var(--mono)}
+.rc-addbtn{position:absolute;right:10px;bottom:10px;background:var(--accent);color:#fff;border:none;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer;display:none;font-family:var(--sans);font-weight:600}
+.rc:hover .rc-addbtn{display:block}
+.add-all-btn{width:100%;padding:8px;margin-top:4px;border-radius:6px;border:1px solid var(--accent);background:var(--blue-bg);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+.add-all-btn:hover{background:var(--accent);color:#fff}
+
+/* ── RIGHT ── */
+.right-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.right-title{font-size:14px;font-weight:700}
+.right-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.count-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;border-radius:10px;margin-left:6px}
+.entries-area{flex:1;overflow-y:auto;padding:14px 18px}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-icon{font-size:44px;margin-bottom:14px;opacity:.5}
+.empty-title{font-size:15px;color:var(--text2);margin-bottom:6px;font-weight:600}
+.empty-desc{font-size:12px;line-height:1.7}
+
+/* ── ENTRY CARD ── */
+.entry-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;box-shadow:var(--sh);overflow:hidden}
+.entry-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);cursor:pointer}
+.entry-header:hover{background:var(--blue-bg)}
+.entry-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.entry-id{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent)}
+.entry-name{color:var(--text2);font-size:11px}
+.entry-badges{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.badge-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-br)}
+.badge-blue {background:var(--blue-bg); color:var(--accent);border:1px solid var(--blue-br)}
+.entry-toggle{color:var(--text3);font-size:13px;transition:transform .2s;flex-shrink:0}
+.entry-toggle.open{transform:rotate(180deg)}
+.entry-body{padding:14px;display:none}
+.entry-body.open{display:block}
+
+/* ── FORM GRID ── */
+.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.fg.c3{grid-template-columns:repeat(3,1fr)}
+.fgroup{display:flex;flex-direction:column;gap:4px}
+.flabel{font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:4px}
+.flabel .req{color:var(--red)}
+.tag-auto{font-size:9px;background:var(--blue-bg);color:var(--accent);border:1px solid var(--blue-br);padding:0 4px;border-radius:3px;font-weight:700;letter-spacing:0;text-transform:none}
+.tag-need{font-size:9px;background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-br);padding:0 4px;border-radius:3px;font-weight:700;letter-spacing:0;text-transform:none}
+.divlabel{font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--text3);text-transform:uppercase;display:flex;align-items:center;gap:8px;margin:12px 0 8px}
+.divlabel::after{content:'';flex:1;height:1px;background:var(--border)}
+.divtag{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-br);font-size:9px;padding:1px 6px;border-radius:8px;text-transform:none;letter-spacing:0}
+.divtag-blue{background:var(--blue-bg);color:var(--accent);border:1px solid var(--blue-br);font-size:9px;padding:1px 6px;border-radius:8px;text-transform:none;letter-spacing:0}
+
+/* ── UNDERLYING GRID ── */
+.und-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
+.und-num{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+
+/* ── PER-ENTRY IP UPLOAD ── */
+.ip-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:linear-gradient(to right,var(--green-bg),#f8fff8);border:1px solid var(--green-br);border-radius:var(--r);margin-bottom:8px;flex-wrap:wrap}
+.ip-bar.over{border-color:var(--green);background:#dcfce7}
+.ip-bar-label{font-size:11px;font-weight:700;color:var(--green);white-space:nowrap}
+.ip-bar-upload{padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;border:1px solid var(--green);background:var(--surface);color:var(--green);cursor:pointer;font-family:var(--sans);transition:all .15s;white-space:nowrap}
+.ip-bar-upload:hover{background:var(--green);color:#fff}
+.ip-bar-fname{font-size:11px;color:var(--text2);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.ip-bar-clear{font-size:14px;color:var(--text3);cursor:pointer;background:none;border:none;padding:0 2px;line-height:1}
+.ip-bar-clear:hover{color:var(--red)}
+.ip-run{padding:5px 12px;border-radius:5px;font-size:11px;font-weight:600;border:none;background:var(--green);color:#fff;cursor:pointer;font-family:var(--sans);transition:opacity .15s;white-space:nowrap}
+.ip-run:hover{opacity:.85}
+.ip-run:disabled{opacity:.4;cursor:not-allowed}
+.ip-result-box{background:var(--green-bg);border:1px solid var(--green-br);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;display:none}
+.ip-result-box.vis{display:block}
+.ip-result-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;border-bottom:1px solid var(--green-br)}
+.ip-result-row:last-child{border-bottom:none}
+.ip-result-und{font-family:var(--mono);font-weight:700;color:var(--accent);min-width:80px}
+.ip-result-price{font-family:var(--mono);font-weight:700;color:var(--green);margin-left:auto}
+.ip-result-na{color:var(--text3);font-size:10px;margin-left:auto}
+
+/* ── COUPON SCHEDULE TABLE ── */
+.sched-wrap{overflow-x:auto;margin-bottom:12px}
+.sched-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.sched-tbl th{background:var(--surface2);padding:5px 8px;border:1px solid var(--border);color:var(--text2);font-weight:700;text-align:center;white-space:nowrap}
+.sched-tbl td{padding:4px 8px;border:1px solid var(--border);text-align:center;font-family:var(--mono);font-size:11px}
+.sched-tbl tr.row-first td{background:var(--blue-bg);color:var(--accent);font-weight:700}
+.sched-tbl tr.row-final td{background:var(--green-bg);color:var(--green);font-weight:700}
+
+/* ── COMPUTED PRICES ── */
+.cp-box{background:var(--green-bg);border:1px solid var(--green-br);border-radius:var(--r);padding:10px 12px;margin-bottom:12px}
+.cp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:7px}
+.cp-item{display:flex;flex-direction:column;gap:2px}
+.cp-und{font-size:11px;font-weight:700;color:var(--accent);font-family:var(--mono)}
+.cp-row{display:flex;justify-content:space-between;font-size:11px}
+.cp-lbl{color:var(--text3)}
+.cp-val{font-family:var(--mono);font-weight:600;color:var(--green)}
+
+/* ── ENTRY ACTIONS ── */
+.entry-actions{display:flex;gap:6px;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--border);margin-top:10px}
+
+/* ── EXPORT PREVIEW ── */
+.export-preview{background:var(--surface);border-top:1px solid var(--border);display:none;flex-direction:column;max-height:260px;flex-shrink:0;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
+.export-preview.vis{display:flex}
+.prev-header{padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px;flex-shrink:0}
+.prev-wrap{overflow:auto;flex:1}
+.prev-tbl{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--mono);white-space:nowrap}
+.prev-tbl th{background:var(--surface2);padding:5px 10px;border:1px solid var(--border);color:var(--text2);font-weight:700;text-align:left;position:sticky;top:0}
+.prev-tbl td{padding:4px 10px;border:1px solid var(--border)}
+.prev-tbl tr:hover td{background:var(--blue-bg)}
+
+/* ── INFO BOX ── */
+.info-box{background:var(--blue-bg);border:1px solid var(--blue-br);border-radius:6px;padding:9px 11px;font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:12px}
+.info-box b{color:var(--text)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- TOAST AREA -->
+<div class="toast-area" id="toastArea"></div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">F</div>
+    <div>
+      <div class="brand-name">FCN Key單工具</div>
+      <div class="brand-sub">永豐銀行 · 金融市場處</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn" onclick="clearAll()">清空全部</button>
+    <button class="btn" onclick="addEmptyEntry()">＋ 手動新增</button>
+    <button class="btn btn-primary" onclick="doExport()">⬇ 匯出大表格式</button>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT -->
+  <div class="left-panel" id="leftPanel">
+    <div class="panel-tabs">
+      <button class="tab active" onclick="switchTab('ai')">🤖 AI 解析</button>
+      <button class="tab" onclick="switchTab('settings')">⚙ 設定</button>
+    </div>
+
+    <!-- AI TAB -->
+    <div class="tab-content active" id="tab-ai">
+      <div class="slabel">AI 提供者</div>
+      <div class="provider-toggle">
+        <button class="provider-btn active" id="btn-gemini" onclick="switchProvider('gemini')">✦ Gemini</button>
+        <button class="provider-btn" id="btn-claude" onclick="switchProvider('claude')">◆ Claude</button>
+      </div>
+      <div id="gemini-models" class="model-pills">
+        <button class="model-pill active" data-model="gemini-2.5-flash" onclick="selectModel(this)">2.5 Flash ★</button>
+        <button class="model-pill" data-model="gemini-2.5-pro" onclick="selectModel(this)">2.5 Pro</button>
+        <button class="model-pill" data-model="gemini-2.5-flash-lite" onclick="selectModel(this)">2.5 Lite</button>
+      </div>
+      <div id="claude-models" class="model-pills" style="display:none">
+        <button class="model-pill active" data-model="claude-sonnet-4-5" onclick="selectModel(this)">Sonnet 4.5 ★</button>
+        <button class="model-pill" data-model="claude-opus-4-5" onclick="selectModel(this)">Opus 4.5</button>
+        <button class="model-pill" data-model="claude-haiku-4-5-20251001" onclick="selectModel(this)">Haiku 4.5</button>
+      </div>
+
+      <div class="slabel">API Key</div>
+      <div class="input-row">
+        <input type="password" class="fi" id="apiKey" placeholder="AIzaSy... 或 sk-ant-..." autocomplete="off" oninput="onKeyInput()">
+        <button class="btn" id="testBtn" style="display:none" onclick="testConn()">測試</button>
+      </div>
+      <div id="keyStatus" class="sbox" style="margin-bottom:10px"></div>
+
+      <div class="slabel">上傳信件</div>
+      <div class="dz" id="emailDZ">
+        <input type="file" id="emailFile" accept=".eml,.txt" multiple onchange="handleEmailFiles(event)">
+        <div class="dz-icon">📧</div>
+        <div class="dz-label">拖曳 .eml 或 .txt</div>
+        <div class="dz-sub">或點擊選取（可多選）</div>
+      </div>
+
+      <div class="slabel">或貼上信件原文</div>
+      <textarea class="email-ta" id="emailText" placeholder="貼上信件純文字，可包含多筆交易..."></textarea>
+
+      <button class="parse-btn" id="parseBtn" onclick="parseEmail()">🤖 AI 解析並填入表單</button>
+      <div id="parseStatus" class="sbox"></div>
+      <div id="resultCards" class="result-cards"></div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab-content" id="tab-settings">
+      <div class="info-box">
+        <b>Gemini</b>：<a href="https://aistudio.google.com" target="_blank" style="color:var(--accent)">aistudio.google.com</a>，Key 前綴 AIzaSy...<br>
+        <b>Claude</b>：<a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>，Key 前綴 sk-ant-...
+      </div>
+      <div class="slabel">預設值</div>
+      <div class="fgroup" style="margin-bottom:10px">
+        <div class="flabel">預設 Funding Spread</div>
+        <input type="text" class="fi" id="defaultFunding" value="SOFR+10bps">
+      </div>
+      <div class="fgroup" style="margin-bottom:10px">
+        <div class="flabel">預設交割方式</div>
+        <select class="fi" id="defaultDelivery"><option value="Physical">Physical</option><option value="Cash">Cash</option></select>
+      </div>
+      <div class="slabel" style="margin-top:16px">日期推導邏輯</div>
+      <div style="font-size:11px;color:var(--text2);line-height:2.1">
+        <b style="color:var(--text)">Effective Date</b> → 信件表格上方直接標示<br>
+        <b style="color:var(--text)">1st Valuation Date</b> → Term 1 的 Coupon Valuation Date<br>
+        <b style="color:var(--text)">Final Valuation Date</b> → Term = Tenor(m) 的 Coupon Valuation Date<br>
+        <b style="color:var(--text)">End Date</b> → 同期的 Payment Date<br>
+        <b style="color:var(--text)">Trade Date</b> → 等成交確認信，手動填入
+      </div>
+      <div class="slabel" style="margin-top:16px">說明書 Initial Price</div>
+      <div style="font-size:11px;color:var(--text2);line-height:2.0">
+        每筆交易的說明書上傳區在右側 entry card 的<br>「連結標的 &amp; Initial Price」區塊。<br>
+        每筆各自上傳對應產品的說明書，AI 只填入該筆的 IP。
+      </div>
+    </div>
+  </div>
+
+  <!-- RESIZER -->
+  <div class="resizer" id="resizer"></div>
+
+  <!-- RIGHT -->
+  <div class="right-panel">
+    <div class="right-header">
+      <div>
+        <div class="right-title">交易紀錄 <span class="count-badge" id="entryCount">0</span></div>
+        <div class="right-sub">填寫完整後匯出大表格式</div>
+      </div>
+      <button class="btn" onclick="togglePreview()">👁 預覽匯出</button>
+    </div>
+
+    <div class="entries-area" id="entriesArea">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">尚無交易資料</div>
+        <div class="empty-desc">從左側 AI 解析信件<br>或點擊右上角「手動新增」</div>
+      </div>
+    </div>
+
+    <div class="export-preview" id="exportPreview">
+      <div class="prev-header">
+        <span style="font-weight:600">大表格式預覽</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-primary" onclick="copyTSV()">📋 複製 TSV</button>
+          <button class="btn" onclick="togglePreview()">✕</button>
+        </div>
+      </div>
+      <div class="prev-wrap"><table class="prev-tbl" id="prevTable"></table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let entries = [], entryCounter = 0;
+let currentProvider = 'gemini', currentModel = 'gemini-2.5-flash';
+const entryDocs = {};  // { entryId: { base64, mimeType, isPDF, isImg, isDOCX, name } }
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+function toast(msg, type = 'info', duration = 3000) {
+  const area = document.getElementById('toastArea');
+  const el = document.createElement('div');
+  el.className = `toast-msg ${type}`;
+  const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+  el.innerHTML = `<span style="font-size:14px">${icons[type]||'ℹ'}</span><span>${msg}</span>`;
+  area.appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'toastOut .25s ease forwards';
+    setTimeout(() => el.remove(), 260);
+  }, duration);
+}
+
+// ══════════════════════════════════════════════
+//  RESIZER (drag to resize left panel)
+// ══════════════════════════════════════════════
+const resizer = document.getElementById('resizer');
+const leftPanel = document.getElementById('leftPanel');
+let isResizing = false, startX = 0, startW = 0;
+
+resizer.addEventListener('mousedown', e => {
+  isResizing = true;
+  startX = e.clientX;
+  startW = leftPanel.offsetWidth;
+  resizer.classList.add('dragging');
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+});
+document.addEventListener('mousemove', e => {
+  if (!isResizing) return;
+  const newW = Math.min(520, Math.max(220, startW + e.clientX - startX));
+  leftPanel.style.width = newW + 'px';
+});
+document.addEventListener('mouseup', () => {
+  if (!isResizing) return;
+  isResizing = false;
+  resizer.classList.remove('dragging');
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+});
+
+// ══════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════
+function switchTab(name) {
+  ['ai','settings'].forEach((n,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n === name);
+    document.getElementById('tab-'+n).classList.toggle('active', n === name);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  PROVIDER / MODEL
+// ══════════════════════════════════════════════
+function switchProvider(p) {
+  currentProvider = p;
+  ['gemini','claude'].forEach(n => {
+    document.getElementById('btn-'+n).classList.toggle('active', n === p);
+    document.getElementById(n+'-models').style.display = n === p ? 'flex' : 'none';
+  });
+  const saved = localStorage.getItem('api_key_'+p) || '';
+  document.getElementById('apiKey').value = saved;
+  const pills = document.querySelectorAll(`#${p}-models .model-pill`);
+  pills.forEach(b => b.classList.remove('active'));
+  if (pills[0]) { pills[0].classList.add('active'); currentModel = pills[0].dataset.model; }
+  document.getElementById('keyStatus').style.display = 'none';
+  onKeyInput();
+}
+function selectModel(btn) {
+  btn.closest('.model-pills').querySelectorAll('.model-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentModel = btn.dataset.model;
+}
+
+// ══════════════════════════════════════════════
+//  API KEY
+// ══════════════════════════════════════════════
+function onKeyInput() {
+  const key = document.getElementById('apiKey').value.trim();
+  const valid = currentProvider === 'gemini'
+    ? (key.startsWith('AIza') && key.length > 20)
+    : (key.startsWith('sk-ant-') && key.length > 20);
+  document.getElementById('testBtn').style.display = valid ? '' : 'none';
+}
+
+async function testConn() {
+  const key = document.getElementById('apiKey').value.trim();
+  showSbox('keyStatus','loading','連線測試中...');
+  const t0 = Date.now();
+  try {
+    if (currentProvider === 'gemini') {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${key}`;
+      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{parts:[{text:'Reply: OK'}]}] }) });
+      const ms = Date.now()-t0;
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        const m = err?.error?.message||`HTTP ${res.status}`;
+        if (m.includes('no longer available')||m.includes('not available to new users'))
+          throw new Error(`${currentModel} 對新用戶已停用，請改用 gemini-2.5-flash`);
+        if (m.includes('API key not valid')) throw new Error('API Key 無效');
+        throw new Error(m);
+      }
+      localStorage.setItem('api_key_gemini', key);
+      showSbox('keyStatus','success',`✓ Gemini 連線成功（${ms}ms）`);
+      toast(`Gemini ${currentModel} 連線成功（${ms}ms）`, 'success');
+    } else {
+      const res = await fetch('https://api.anthropic.com/v1/messages', { method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body: JSON.stringify({ model:currentModel, max_tokens:16, messages:[{role:'user',content:'Reply: OK'}] }) });
+      const ms = Date.now()-t0;
+      if (!res.ok) { const err=await res.json().catch(()=>({})); throw new Error(err?.error?.message||`HTTP ${res.status}`); }
+      localStorage.setItem('api_key_claude', key);
+      showSbox('keyStatus','success',`✓ Claude 連線成功（${ms}ms）`);
+      toast(`Claude ${currentModel} 連線成功（${ms}ms）`, 'success');
+    }
+  } catch(e) {
+    showSbox('keyStatus','error','✗ '+e.message);
+    toast(e.message, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  EMAIL UPLOAD
+// ══════════════════════════════════════════════
+const emailDZ = document.getElementById('emailDZ');
+emailDZ.addEventListener('dragover', e => { e.preventDefault(); emailDZ.classList.add('over'); });
+emailDZ.addEventListener('dragleave', () => emailDZ.classList.remove('over'));
+emailDZ.addEventListener('drop', e => { e.preventDefault(); emailDZ.classList.remove('over'); loadEmailFiles([...e.dataTransfer.files]); });
+async function handleEmailFiles(e) { loadEmailFiles([...e.target.files]); }
+async function loadEmailFiles(files) {
+  let combined = '';
+  for (const f of files) combined += `\n\n=== FILE: ${f.name} ===\n` + await f.text();
+  document.getElementById('emailText').value = combined.trim();
+  toast(`已載入 ${files.length} 個信件檔案`, 'success');
+}
+
+// ══════════════════════════════════════════════
+//  SYSTEM PROMPT
+// ══════════════════════════════════════════════
+const SYSTEM_PROMPT = `你是永豐銀行金融市場處的 FCN 結構商品助理。
+從 FCN 交易信件中擷取所有交易資訊，回傳純 JSON 陣列，不含 markdown。
+
+【日期推導邏輯 - 非常重要】
+信件底部有一張 Coupon Schedule 表格（Term/Start Date/End Date/Coupon Valuation Date/Payment date）。
+
+1. effective_date = 信件標示的 Effective Date（所有筆共用）
+2. first_valuation_date = 表格 Term=1 的 Coupon Valuation Date
+3. final_valuation_date = 表格中 Term 等於該筆 tenor_m 的 Coupon Valuation Date
+4. end_date = 同一行的 Payment date（即 Term=tenor_m 那行）
+5. trade_date = null（等成交確認信）
+
+格式：
+[{
+  "productCode":"DTE67750","group":"#99-1","counterparty":"BBVA",
+  "ccy":"USD","notional":500000,"structure":"FIXKK",
+  "underlyings":["TSLA UW","PLTR UW","MU UW"],
+  "strike_pct":0.70,"ko_type":"Daily Memory","ko_pct":0.95,
+  "ki_type":"EKI","ki_pct":0.55,
+  "coupon_pct":0.135,"upfront_pct":0.0337,"tenor_m":4,"non_call_periods":1,
+  "funding_type":"SOFR+10bps","delivery":"Physical",
+  "trade_date":null,"effective_date":"2026-06-01",
+  "first_valuation_date":"2026-07-01",
+  "final_valuation_date":"2026-10-01","end_date":"2026-10-05",
+  "initial_price_1":null,"initial_price_2":null,"initial_price_3":null,
+  "initial_price_4":null,"initial_price_5":null,
+  "coupon_schedule":[
+    {"term":1,"start":"2026-05-31","end":"2026-07-01","valuation":"2026-07-01","payment":"2026-07-06"}
+  ]
+}]
+
+規則：strike/ko/ki 用小數（70%→0.70）；coupon/upfront 用小數（13.5%→0.135）。
+structure：FIXKK=有KO且有KI；FIXKO=有KO無KI。
+coupon_schedule 只收錄該筆 tenor_m 範圍內的期數。日期格式 YYYY-MM-DD。
+第一個字元必須是 [。
+
+重要：信件中可能有 2、3 筆或更多 FCN 交易（每個組別代號如 #99-1、#99-2、C2 等代表一筆），
+請確保將每一筆都解析成獨立的 JSON 物件放入陣列，不得漏掉任何一筆。`;
+
+// ══════════════════════════════════════════════
+//  PARSE EMAIL
+// ══════════════════════════════════════════════
+async function parseEmail() {
+  const key = document.getElementById('apiKey').value.trim() || localStorage.getItem('api_key_'+currentProvider) || '';
+  if (!key) { toast('請先填入 API Key 並測試連線', 'error'); return; }
+  const emailText = document.getElementById('emailText').value.trim();
+  if (!emailText) { toast('請上傳信件或貼上文字', 'warning'); return; }
+
+  document.getElementById('parseBtn').disabled = true;
+  showSbox('parseStatus','loading','AI 解析中，請稍候...');
+
+  try {
+    const rawText = await callAI(key, SYSTEM_PROMPT, '請解析以下信件內容，信件中可能有多筆交易（如 #99-1、#99-2、C2 等），請全部擷取，不要漏掉任何一筆：\n\n' + emailText);
+    const parsed = parseJSON(rawText);
+    if (!Array.isArray(parsed) || !parsed.length) throw new Error('未找到 FCN 交易資訊');
+    renderResultCards(parsed);
+    showSbox('parseStatus','success',`✓ 找到 ${parsed.length} 筆交易`);
+    toast(`解析完成，找到 ${parsed.length} 筆交易，點卡片加入表單`, 'success');
+  } catch(e) {
+    showSbox('parseStatus','error','解析失敗：'+e.message);
+    toast('解析失敗：'+e.message, 'error');
+  } finally {
+    document.getElementById('parseBtn').disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════
+//  CORE AI CALL (Gemini + Claude unified)
+// ══════════════════════════════════════════════
+async function callAI(key, systemPrompt, userMsg, extraPart = null) {
+  if (currentProvider === 'gemini') {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${key}`;
+    const parts = [{ text: systemPrompt + '\n\n' + userMsg }];
+    if (extraPart) parts.push(extraPart); // { inline_data: { mime_type, data } }
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{ parts }], generationConfig:{ maxOutputTokens: 8192 } }) });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      const m = err?.error?.message || `HTTP ${res.status}`;
+      if (m.includes('no longer available')) throw new Error(`${currentModel} 已停用，請改用 gemini-2.5-flash`);
+      if (m.includes('API key not valid')) throw new Error('Gemini API Key 無效');
+      if (m.includes('Invalid MIME type')||m.includes('not supported')) throw new Error('此格式 Gemini 不支援，請改用 PDF 或圖片');
+      throw new Error(m);
+    }
+    const data = await res.json();
+    return (data?.candidates?.[0]?.content?.parts||[]).filter(p=>p.text).map(p=>p.text).join('');
+  } else {
+    // Claude
+    let msgContent = [{ type:'text', text: userMsg }];
+    if (extraPart) {
+      // extraPart is { type:'document'|'image', source:{...} }
+      msgContent = [extraPart, { type:'text', text: userMsg }];
+    }
+    const res = await fetch('https://api.anthropic.com/v1/messages', { method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({ model:currentModel, max_tokens:16000, system:systemPrompt,
+        messages:[{ role:'user', content: msgContent }] }) });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err?.error?.message||`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return data?.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'';
+  }
+}
+
+function parseJSON(raw) {
+  try {
+    return JSON.parse(raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim());
+  } catch(e) {
+    const m = raw.match(/[\[{][\s\S]*[\]}]/);
+    if (m) return JSON.parse(m[0]);
+    throw new Error('AI 回應格式不正確，請重試');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  RESULT CARDS
+// ══════════════════════════════════════════════
+// Store parsed deals for result cards
+let _lastDeals = [];
+
+function renderResultCards(deals) {
+  _lastDeals = deals;
+  const container = document.getElementById('resultCards');
+  container.innerHTML = '';
+  deals.forEach((d, idx) => {
+    const el = document.createElement('div');
+    el.className = 'rc';
+    const dates = [
+      d.effective_date && `<span class="dbadge">Eff ${fmtD(d.effective_date)}</span>`,
+      d.first_valuation_date && `<span class="dbadge">1st ${fmtD(d.first_valuation_date)}</span>`,
+      d.final_valuation_date && `<span class="dbadge">Final ${fmtD(d.final_valuation_date)}</span>`,
+      d.end_date && `<span class="dbadge">End ${fmtD(d.end_date)}</span>`,
+    ].filter(Boolean).join('');
+    el.innerHTML = `
+      <div class="rc-head">
+        <span class="rc-id">${d.productCode||d.group||'?'}</span>
+        <span class="rc-ccy">${d.ccy} ${(d.notional||0).toLocaleString()}</span>
+      </div>
+      <div class="rc-name">${d.counterparty||''} · ${d.tenor_m||'?'}M · Coupon ${fmtPct(d.coupon_pct)} · Strike ${fmtPct(d.strike_pct)}</div>
+      <div class="rc-unds">${(d.underlyings||[]).map(u=>`<span class="sbadge">${u}</span>`).join('')}</div>
+      ${dates ? `<div class="rc-dates">${dates}</div>` : ''}
+      <button class="rc-addbtn" data-idx="${idx}">+ 加入</button>`;
+
+    // Use event listener (not inline onclick) to avoid quote escaping issues
+    el.querySelector('.rc-addbtn').addEventListener('click', e => {
+      e.stopPropagation();
+      addEntry(_lastDeals[idx]);
+    });
+    el.addEventListener('click', e => { if(e.target.tagName!=='BUTTON') el.classList.toggle('selected'); });
+    container.appendChild(el);
+  });
+  if (deals.length > 1) {
+    const btn = document.createElement('button');
+    btn.className = 'add-all-btn';
+    btn.textContent = `全部加入（${deals.length} 筆）`;
+    btn.addEventListener('click', () => {
+      deals.forEach(d => addEntry(d));
+      toast(`已加入全部 ${deals.length} 筆交易`, 'success');
+    });
+    container.appendChild(btn);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  ENTRY MANAGEMENT
+// ══════════════════════════════════════════════
+function addEntry(dealOrStr) {
+  const data = !dealOrStr ? {}
+    : (typeof dealOrStr === 'string' ? JSON.parse(dealOrStr) : dealOrStr);
+  const id = ++entryCounter;
+  entries.push({ id, data });
+  renderEntry({ id, data });
+  updateCount();
+  document.getElementById('emptyState').style.display = 'none';
+  setTimeout(() => document.getElementById('entriesArea').scrollTop = 99999, 60);
+  toast(`已加入 ${data.productCode||data.group||'新交易'}`, 'success');
+}
+function addEmptyEntry() { addEntry(null); }
+function removeEntry(id) {
+  const e = entries.find(e => e.id === id);
+  entries = entries.filter(e => e.id !== id);
+  delete entryDocs[id];
+  document.getElementById('entry-'+id)?.remove();
+  updateCount();
+  if (!entries.length) document.getElementById('emptyState').style.display = '';
+  toast(`已移除 ${e?.data?.productCode||'交易'}`, 'info');
+}
+function updateCount() { document.getElementById('entryCount').textContent = entries.length; }
+
+// ══════════════════════════════════════════════
+//  RENDER ENTRY
+// ══════════════════════════════════════════════
+function renderEntry({ id, data: d }) {
+  const area = document.getElementById('entriesArea');
+  const und = d.underlyings || [];
+  const sched = d.coupon_schedule || [];
+  const tenor = d.tenor_m || 0;
+
+  const schedRows = sched.map(r => {
+    const cls = r.term === tenor ? 'row-final' : r.term === 1 ? 'row-first' : '';
+    return `<tr class="${cls}">
+      <td>${r.term}</td><td>${fmtD(r.start)}</td><td>${fmtD(r.end)}</td>
+      <td>${fmtD(r.valuation)}</td><td>${fmtD(r.payment)}</td>
+      <td style="font-size:10px">${r.term===tenor?'← Final Val / End':r.term===1?'← 1st Val':''}</td>
+    </tr>`;
+  }).join('');
+
+  const label = d.productCode||d.group||'此筆';
+
+  const card = document.createElement('div');
+  card.className = 'entry-card';
+  card.id = 'entry-'+id;
+  card.innerHTML = `
+    <div class="entry-header" onclick="toggleEntry(${id})">
+      <div class="entry-num">${id}</div>
+      <div>
+        <div class="entry-id">${d.productCode||d.group||'新增交易'}</div>
+        <div class="entry-name">${und.join(' · ')||'點擊展開填寫'}</div>
+      </div>
+      <div class="entry-badges">
+        ${d.ccy?`<span class="badge badge-blue">${d.ccy}</span>`:''}
+        ${d.tenor_m?`<span class="badge badge-green">${d.tenor_m}M</span>`:''}
+        ${d.final_valuation_date?`<span class="badge badge-blue">Final ${fmtD(d.final_valuation_date)}</span>`:''}
+      </div>
+      <span class="entry-toggle open" id="toggle-${id}">▾</span>
+    </div>
+    <div class="entry-body open" id="body-${id}">
+
+      <div class="divlabel">基本資訊</div>
+      <div class="fg">
+        <div class="fgroup"><div class="flabel">Product Code <span class="req">*</span></div>
+          <input class="fi need" id="e${id}_productCode" value="${d.productCode||''}" placeholder="DTE xxxxx"></div>
+        <div class="fgroup"><div class="flabel">組別</div>
+          <input class="fi" id="e${id}_group" value="${d.group||''}" placeholder="#99-1"></div>
+        <div class="fgroup"><div class="flabel">商品架構</div>
+          <select class="fi" id="e${id}_structure">
+            <option value="FIXKK" ${d.structure==='FIXKK'?'selected':''}>FIXKK</option>
+            <option value="FIXKO" ${d.structure==='FIXKO'?'selected':''}>FIXKO</option>
+          </select></div>
+        <div class="fgroup"><div class="flabel">對手行</div>
+          <input class="fi" id="e${id}_counterparty" value="${d.counterparty||''}" placeholder="Nomura"></div>
+      </div>
+      <div class="fg">
+        <div class="fgroup"><div class="flabel">CCY</div>
+          <select class="fi" id="e${id}_ccy">
+            <option value="USD" ${d.ccy==='USD'?'selected':''}>USD</option>
+            <option value="CNH" ${d.ccy==='CNH'?'selected':''}>CNH</option>
+            <option value="JPY" ${d.ccy==='JPY'?'selected':''}>JPY</option>
+            <option value="EUR" ${d.ccy==='EUR'?'selected':''}>EUR</option>
+          </select></div>
+        <div class="fgroup"><div class="flabel">Notional</div>
+          <input class="fi" id="e${id}_notional" value="${d.notional||''}" placeholder="500000"></div>
+        <div class="fgroup"><div class="flabel">交割方式</div>
+          <select class="fi" id="e${id}_delivery">
+            <option value="Physical" ${(d.delivery||'Physical')==='Physical'?'selected':''}>Physical</option>
+            <option value="Cash" ${d.delivery==='Cash'?'selected':''}>Cash</option>
+          </select></div>
+        <div class="fgroup"><div class="flabel">Tenor (m)</div>
+          <input class="fi" id="e${id}_tenor" value="${d.tenor_m||''}" placeholder="6"></div>
+      </div>
+
+      <div class="divlabel">日期 <span class="divtag-blue">藍色=AI自動帶入</span> <span class="divtag">Trade Date 需手動填</span></div>
+      <div class="fg c3">
+        <div class="fgroup"><div class="flabel">Trade Date <span class="req">*</span> <span class="tag-need">手動填</span></div>
+          <input type="date" class="fi need" id="e${id}_tradeDate" value="${d.trade_date||''}"></div>
+        <div class="fgroup"><div class="flabel">Effective Date <span class="tag-auto">AI帶入</span></div>
+          <input type="date" class="fi ${d.effective_date?'auto-filled':''}" id="e${id}_effectiveDate" value="${d.effective_date||''}"></div>
+        <div class="fgroup"><div class="flabel">1st Valuation Date <span class="tag-auto">AI帶入</span></div>
+          <input type="date" class="fi ${d.first_valuation_date?'auto-filled':''}" id="e${id}_firstValDate" value="${d.first_valuation_date||''}"></div>
+        <div class="fgroup"><div class="flabel">Final Valuation Date <span class="tag-auto">AI帶入</span></div>
+          <input type="date" class="fi ${d.final_valuation_date?'auto-filled':''}" id="e${id}_finalValDate" value="${d.final_valuation_date||''}"></div>
+        <div class="fgroup"><div class="flabel">End Date <span class="tag-auto">AI帶入</span></div>
+          <input type="date" class="fi ${d.end_date?'auto-filled':''}" id="e${id}_endDate" value="${d.end_date||''}"></div>
+        <div class="fgroup"><div class="flabel">配息期數</div>
+          <input class="fi" id="e${id}_periods" value="${d.tenor_m||''}"></div>
+      </div>
+
+      ${sched.length ? `
+      <div class="divlabel">Coupon Schedule <span class="divtag-blue">AI 從信件擷取</span></div>
+      <div class="sched-wrap"><table class="sched-tbl">
+        <thead><tr><th>Term</th><th>Start</th><th>End</th><th>Coupon Val Date</th><th>Payment</th><th></th></tr></thead>
+        <tbody>${schedRows}</tbody>
+      </table></div>` : ''}
+
+      <div class="divlabel">連結標的 & Initial Price <span class="divtag">IP 需對應說明書</span></div>
+
+      <!-- Per-entry IP upload bar -->
+      <div class="ip-bar" id="ipbar-${id}">
+        <span class="ip-bar-label">📄 說明書</span>
+        <input type="file" id="ipdoc-${id}" style="display:none" accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.webp" onchange="loadEntryDoc(${id}, this.files[0])">
+        <button class="ip-bar-upload" onclick="document.getElementById('ipdoc-${id}').click()">上傳說明書</button>
+        <span class="ip-bar-fname" id="ipdoc-name-${id}">未上傳（${label} 的說明書）</span>
+        <button class="ip-bar-clear" id="ipdoc-clear-${id}" onclick="clearEntryDoc(${id})" style="display:none">✕</button>
+        <button class="ip-run" id="ipdoc-run-${id}" onclick="runEntryIP(${id})" style="display:none" disabled>🔍 識別 IP</button>
+      </div>
+      <div class="ip-result-box" id="ipresult-${id}"></div>
+
+      <div class="und-grid">
+        ${[1,2,3,4,5].map(i=>`
+          <div>
+            <div class="und-num">標的 ${i}</div>
+            <input class="fi" id="e${id}_und${i}" value="${und[i-1]||''}" placeholder="TSLA UW" oninput="recalcPrices(${id})">
+            <div style="margin-top:4px">
+              <div class="flabel" style="font-size:9px">Initial Price <span class="req">*</span></div>
+              <input class="fi need" id="e${id}_ip${i}" value="${d['initial_price_'+i]||''}" placeholder="—" oninput="recalcPrices(${id})">
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <div class="divlabel">條件參數</div>
+      <div class="fg">
+        <div class="fgroup"><div class="flabel">K (Strike%) <span class="req">*</span></div>
+          <input class="fi" id="e${id}_k_pct" value="${d.strike_pct?fmtPct(d.strike_pct):''}" placeholder="80.00%" oninput="recalcPrices(${id})"></div>
+        <div class="fgroup"><div class="flabel">KO Type</div>
+          <select class="fi" id="e${id}_koType">
+            <option value="Daily Memory" ${(d.ko_type||'').includes('Memory')?'selected':''}>Daily Memory</option>
+            <option value="Daily" ${d.ko_type==='Daily'?'selected':''}>Daily</option>
+            <option value="Monthly" ${d.ko_type==='Monthly'?'selected':''}>Monthly</option>
+            <option value="NONE" ${!d.ko_type||d.ko_type==='NONE'?'selected':''}>NONE</option>
+          </select></div>
+        <div class="fgroup"><div class="flabel">KO%</div>
+          <input class="fi" id="e${id}_ko_pct" value="${d.ko_pct?fmtPct(d.ko_pct):''}" placeholder="100.00%" oninput="recalcPrices(${id})"></div>
+        <div class="fgroup"><div class="flabel">KI Type</div>
+          <select class="fi" id="e${id}_kiType">
+            <option value="EKI" ${d.ki_type==='EKI'?'selected':''}>EKI</option>
+            <option value="DKI" ${d.ki_type==='DKI'?'selected':''}>DKI</option>
+            <option value="NONE" ${!d.ki_type||d.ki_type==='NONE'?'selected':''}>NONE</option>
+          </select></div>
+        <div class="fgroup"><div class="flabel">KI%</div>
+          <input class="fi" id="e${id}_ki_pct" value="${d.ki_pct?fmtPct(d.ki_pct):''}" placeholder="55.00%" oninput="recalcPrices(${id})"></div>
+        <div class="fgroup"><div class="flabel">Coupon (%)</div>
+          <input class="fi" id="e${id}_coupon" value="${d.coupon_pct?fmtPct(d.coupon_pct):''}" placeholder="15.00%"></div>
+        <div class="fgroup"><div class="flabel">Upfront (%)</div>
+          <input class="fi" id="e${id}_upfront" value="${d.upfront_pct?fmtPct(d.upfront_pct):''}" placeholder="3.00%"></div>
+        <div class="fgroup"><div class="flabel">Funding Spread</div>
+          <input class="fi" id="e${id}_funding" value="${d.funding_type||'SOFR+10bps'}"></div>
+      </div>
+
+      <div class="cp-box">
+        <div class="slabel" style="color:var(--green)">📐 計算價格（IP × 條件%）</div>
+        <div class="cp-grid" id="cpg-${id}">
+          <div style="color:var(--text3);font-size:11px;grid-column:span 5">填入 Initial Price 及 K% 後自動顯示</div>
+        </div>
+      </div>
+
+      <div class="entry-actions">
+        <button class="btn btn-danger-ol" onclick="removeEntry(${id})">✕ 移除</button>
+        <button class="btn" onclick="copySingle(${id})">↗ 複製此筆</button>
+      </div>
+    </div>`;
+
+  area.insertBefore(card, document.getElementById('emptyState'));
+
+  // Drag & drop on ip-bar
+  const bar = card.querySelector('.ip-bar');
+  bar.addEventListener('dragover', e => { e.stopPropagation(); e.preventDefault(); bar.classList.add('over'); });
+  bar.addEventListener('dragleave', () => bar.classList.remove('over'));
+  bar.addEventListener('drop', e => {
+    e.stopPropagation(); e.preventDefault(); bar.classList.remove('over');
+    const f = e.dataTransfer.files[0]; if (f) loadEntryDoc(id, f);
+  });
+
+  recalcPrices(id);
+}
+
+function toggleEntry(id) {
+  document.getElementById('body-'+id).classList.toggle('open');
+  document.getElementById('toggle-'+id).classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════
+//  PER-ENTRY DOC UPLOAD
+// ══════════════════════════════════════════════
+async function loadEntryDoc(id, file) {
+  if (!file) return;
+  const name = file.name.toLowerCase();
+  const isPDF  = name.endsWith('.pdf') || file.type === 'application/pdf';
+  const isDOCX = name.endsWith('.docx') || name.endsWith('.doc');
+  const isImg  = /\.(png|jpg|jpeg|webp|gif)$/.test(name) || file.type.startsWith('image/');
+  if (!isPDF && !isDOCX && !isImg) { toast('不支援此格式，請使用 PDF、DOCX 或圖片', 'error'); return; }
+
+  const base64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('讀取失敗'));
+    r.readAsDataURL(file);
+  });
+  let mimeType = file.type;
+  if (!mimeType || mimeType === 'application/octet-stream')
+    mimeType = isPDF ? 'application/pdf' : isDOCX ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'image/png';
+
+  entryDocs[id] = { base64, mimeType, isPDF, isDOCX, isImg, name: file.name };
+
+  document.getElementById('ipdoc-name-'+id).textContent = '📄 '+file.name;
+  document.getElementById('ipdoc-clear-'+id).style.display = '';
+  const runBtn = document.getElementById('ipdoc-run-'+id);
+  runBtn.style.display = ''; runBtn.disabled = false;
+  toast(`已載入說明書：${file.name}`, 'success');
+}
+
+function clearEntryDoc(id) {
+  delete entryDocs[id];
+  const entry = entries.find(e => e.id === id);
+  const label = entry ? (entry.data.productCode||entry.data.group||'此筆') : '此筆';
+  document.getElementById('ipdoc-name-'+id).textContent = `未上傳（${label} 的說明書）`;
+  document.getElementById('ipdoc-clear-'+id).style.display = 'none';
+  const runBtn = document.getElementById('ipdoc-run-'+id);
+  runBtn.style.display = 'none';
+  document.getElementById('ipdoc-'+id).value = '';
+  const resBox = document.getElementById('ipresult-'+id);
+  resBox.classList.remove('vis'); resBox.innerHTML = '';
+}
+
+async function runEntryIP(id) {
+  const doc = entryDocs[id];
+  if (!doc) { toast('請先上傳說明書', 'warning'); return; }
+  const key = document.getElementById('apiKey').value.trim() || localStorage.getItem('api_key_'+currentProvider) || '';
+  if (!key) { toast('請先填入 API Key', 'error'); return; }
+
+  const unds = [1,2,3,4,5].map(i => document.getElementById(`e${id}_und${i}`)?.value.trim()||'').filter(Boolean);
+  if (!unds.length) { toast('此筆尚未有連結標的', 'warning'); return; }
+
+  if (doc.isDOCX && currentProvider === 'claude') {
+    toast('Claude 不支援直接讀取 DOCX，請改用 Gemini 或將文件轉存為 PDF', 'warning'); return;
+  }
+
+  const runBtn = document.getElementById('ipdoc-run-'+id);
+  runBtn.disabled = true; runBtn.textContent = '⏳ 識別中...';
+
+  const ipPrompt = `你是永豐銀行 FCN 結構商品助理。
+請從這份說明書 / Term Sheet 中，找出以下股票的 Initial Price（期初股價、期初參考價格）：
+${unds.join('、')}
+
+注意：Initial Price 可能標示為「初始股價」「期初收盤價」「參考價格」「Strike Reference」「Initial Reference Price」「Initial Closing Price」等，請依文件判斷。
+
+回傳純 JSON 物件，金額為數字，找不到填 null。格式：
+{"TSLA UW": 432.96, "NVDA UW": 187.24}
+只回傳 JSON，第一個字元必須是 {`;
+
+  try {
+    let extraPart = null;
+    if (currentProvider === 'gemini') {
+      extraPart = { inline_data: { mime_type: doc.mimeType, data: doc.base64 } };
+    } else {
+      extraPart = doc.isPDF
+        ? { type:'document', source:{ type:'base64', media_type:'application/pdf', data:doc.base64 } }
+        : { type:'image',    source:{ type:'base64', media_type:doc.mimeType,       data:doc.base64 } };
+    }
+
+    const rawText = await callAI(key, ipPrompt, `請從此文件找出以下股票的 Initial Price：${unds.join('、')}`, extraPart);
+    const ipMap = parseJSON(rawText);
+
+    // Fill into this entry's IP fields
+    let filled = 0;
+    const rows = unds.map((code, idx) => {
+      const ipEl = document.getElementById(`e${id}_ip${idx+1}`);
+      const price = ipMap[code];
+      if (price != null && !isNaN(Number(price))) {
+        if (ipEl) { ipEl.value = Number(price); ipEl.classList.remove('need'); ipEl.classList.add('auto-filled'); }
+        filled++;
+        return `<div class="ip-result-row"><span class="ip-result-und">${code}</span><span class="ip-result-price">${Number(price).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>`;
+      } else {
+        return `<div class="ip-result-row"><span class="ip-result-und">${code}</span><span class="ip-result-na">未找到</span></div>`;
+      }
+    });
+    recalcPrices(id);
+
+    const resBox = document.getElementById('ipresult-'+id);
+    resBox.innerHTML = `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;letter-spacing:.06em">識別結果（${doc.name}）</div>${rows.join('')}
+      <div style="font-size:11px;margin-top:6px;color:${filled>0?'var(--green)':'var(--red)'}">
+        ${filled > 0 ? `✓ 已填入 ${filled}/${unds.length} 個 Initial Price` : '⚠ 未找到任何 Initial Price，請手動填寫'}
+      </div>`;
+    resBox.classList.add('vis');
+
+    if (filled > 0) toast(`${document.getElementById('e'+id+'_productCode')?.value||'此筆'} 已填入 ${filled} 個 Initial Price`, 'success');
+    else toast('未找到任何 Initial Price，請確認說明書內容', 'warning');
+
+  } catch(e) {
+    toast('識別失敗：'+e.message, 'error');
+  } finally {
+    runBtn.disabled = false; runBtn.textContent = '🔍 識別 IP';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  PRICE CALCULATION
+// ══════════════════════════════════════════════
+function recalcPrices(id) {
+  const items = [1,2,3,4,5].map(i => ({
+    und: document.getElementById(`e${id}_und${i}`)?.value.trim()||'',
+    ip:  parseFloat(document.getElementById(`e${id}_ip${i}`)?.value)
+  })).filter(x => x.und);
+  const kPct  = parsePct(document.getElementById(`e${id}_k_pct`)?.value);
+  const koPct = parsePct(document.getElementById(`e${id}_ko_pct`)?.value);
+  const kiPct = parsePct(document.getElementById(`e${id}_ki_pct`)?.value);
+  const grid = document.getElementById('cpg-'+id);
+  if (!grid) return;
+  const hasIP = items.some(x => !isNaN(x.ip));
+  if (!hasIP || isNaN(kPct)) {
+    grid.innerHTML = '<div style="color:var(--text3);font-size:11px;grid-column:span 5">填入 Initial Price 及 K% 後自動顯示</div>';
+    return;
+  }
+  grid.innerHTML = items.map(({und,ip}) => isNaN(ip) ? '' : `
+    <div class="cp-item">
+      <div class="cp-und">${und.replace(/ U[WNQ]$/,'')}</div>
+      <div class="cp-row"><span class="cp-lbl">IP</span><span style="font-family:var(--mono);color:var(--text2);font-size:11px">${ip.toFixed(2)}</span></div>
+      <div class="cp-row"><span class="cp-lbl">K</span><span class="cp-val">${(ip*kPct).toFixed(2)}</span></div>
+      ${!isNaN(koPct)?`<div class="cp-row"><span class="cp-lbl">KO</span><span class="cp-val">${(ip*koPct).toFixed(2)}</span></div>`:''}
+      ${!isNaN(kiPct)?`<div class="cp-row"><span class="cp-lbl">KI</span><span class="cp-val">${(ip*kiPct).toFixed(2)}</span></div>`:''}
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════════
+const HEADERS = [
+  'Product Code','商品架構','Trade Date','Effective date',
+  '1st Valuation Date','Final Valuation Date','End date',
+  'CCY','Notional',
+  'Underlying 1','Underlying 2','Underlying 3','Underlying 4','Underlying 5',
+  'Initial Price 1','Initial Price 2','Initial Price 3','Initial Price 4','Initial Price 5',
+  'KO Type','KO%','KI Type','KI%','K%',
+  '上手併單後AMT','交割方式','配息期數','Funding Spread','Coupon (%)'
+];
+function getRow(id) {
+  const g  = k => document.getElementById(`e${id}_${k}`)?.value.trim()||'';
+  const gs = k => document.getElementById(`e${id}_${k}`)?.value||'';
+  const fD = v => v ? v.replace(/-/g,'/') : '';
+  const koT = gs('koType'), kiT = gs('kiType');
+  const n = parseFloat(g('notional'))||0;
+  return [
+    g('productCode'), gs('structure'),
+    fD(g('tradeDate')), fD(g('effectiveDate')),
+    fD(g('firstValDate')), fD(g('finalValDate')), fD(g('endDate')),
+    gs('ccy'), n ? n.toLocaleString() : '',
+    g('und1'),g('und2'),g('und3'),g('und4'),g('und5'),
+    g('ip1'),g('ip2'),g('ip3'),g('ip4'),g('ip5'),
+    koT, koT==='NONE'?'NONE':g('ko_pct'),
+    kiT, kiT==='NONE'?'NONE':g('ki_pct'),
+    g('k_pct'),
+    n ? n.toLocaleString() : '',
+    gs('delivery'), g('periods')||g('tenor'), g('funding'), g('coupon')
+  ];
+}
+
+function doExport() {
+  if (!entries.length) { toast('尚無資料可匯出', 'warning'); return; }
+  renderPrevTable();
+  document.getElementById('exportPreview').classList.add('vis');
+  toast('匯出預覽已開啟，點「複製 TSV」貼入 Excel', 'info');
+}
+function togglePreview() {
+  const p = document.getElementById('exportPreview');
+  if (p.classList.contains('vis')) { p.classList.remove('vis'); return; }
+  if (!entries.length) { toast('尚無資料', 'warning'); return; }
+  renderPrevTable(); p.classList.add('vis');
+}
+function renderPrevTable() {
+  let html = '<tr>'+HEADERS.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  entries.forEach(e => { html += '<tr>'+getRow(e.id).map(c=>`<td>${c}</td>`).join('')+'</tr>'; });
+  document.getElementById('prevTable').innerHTML = html;
+}
+function copyTSV() {
+  const tsv = [HEADERS,...entries.map(e=>getRow(e.id))].map(r=>r.join('\t')).join('\n');
+  navigator.clipboard.writeText(tsv).then(() => toast('已複製 TSV，可直接貼入 Excel', 'success'));
+}
+function copySingle(id) {
+  const tsv = [HEADERS,getRow(id)].map(r=>r.join('\t')).join('\n');
+  navigator.clipboard.writeText(tsv).then(() => toast('已複製此筆', 'success'));
+}
+function clearAll() {
+  if (!confirm('確定清空全部？')) return;
+  entries = []; entryCounter = 0;
+  Object.keys(entryDocs).forEach(k => delete entryDocs[k]);
+  document.getElementById('entriesArea').innerHTML =
+    '<div class="empty-state" id="emptyState"><div class="empty-icon">📋</div><div class="empty-title">尚無交易資料</div><div class="empty-desc">從左側 AI 解析信件<br>或點擊右上角「手動新增」</div></div>';
+  document.getElementById('exportPreview').classList.remove('vis');
+  updateCount();
+  toast('已清空所有資料', 'info');
+}
+
+// ══════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════
+function showSbox(id, type, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'sbox '+type; el.style.display = 'flex';
+  el.innerHTML = type==='loading'?`<div class="spinner"></div><span>${msg}</span>`:`<span>${msg}</span>`;
+}
+function parsePct(str) { if(!str) return NaN; return parseFloat(str.replace('%',''))/100; }
+function fmtPct(v)  { if(v==null||isNaN(v)) return ''; return (v*100).toFixed(2)+'%'; }
+function fmtD(s)    { if(!s) return ''; return String(s).replace(/-/g,'/'); }
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  const k = localStorage.getItem('api_key_gemini')||'';
+  if (k) document.getElementById('apiKey').value = k;
+  onKeyInput();
+});
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => e.preventDefault());
+</script>
+</body>
+</html>

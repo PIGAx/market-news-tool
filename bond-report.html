@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>債券研究報告產生器</title>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0f0f0f;
+    --paper: #faf8f3;
+    --cream: #f2ede3;
+    --accent: #003087;
+    --gold: #E2001A;
+    --muted: #6b6560;
+    --border: #d8d0c4;
+    --green: #1a6b3c;
+    --red: #c8381a;
+    --blue-light: #e8f0fc;
+    --gemini-blue: #1a73e8;
+    --claude-orange: #d97706;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+  /* ── SCREEN UI ── */
+  .screen-ui { display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+
+  /* ── MASTHEAD ── */
+  .masthead { text-align: center; margin-bottom: 32px; }
+
+  /* ── INPUT CARD ── */
+  .input-card {
+    background: white; border: 1px solid var(--border); border-radius: 2px;
+    padding: 32px 36px; width: 100%; max-width: 620px;
+    box-shadow: 4px 4px 0 var(--border);
+  }
+
+  /* ── API SETTINGS ── */
+  .api-settings-section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .section-row-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; font-weight: 500; display: block; }
+
+  .provider-toggle { display: flex; margin-bottom: 14px; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; width: 100%; }
+  .provider-btn { flex: 1; padding: 10px 0; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; border: none; cursor: pointer; transition: background 0.18s, color 0.18s; background: var(--paper); color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 7px; }
+  .provider-btn:not(:last-child) { border-right: 1px solid var(--border); }
+  .provider-btn.active[data-provider="gemini"] { background: var(--gemini-blue); color: white; }
+  .provider-btn.active[data-provider="claude"] { background: var(--claude-orange); color: white; }
+
+  .model-select-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .model-select-row label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); white-space: nowrap; font-weight: 500; }
+  .model-pill-group { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+  .model-pill { padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; cursor: pointer; transition: all 0.15s; background: var(--paper); color: var(--muted); white-space: nowrap; }
+  .model-pill:hover { border-color: var(--ink); color: var(--ink); }
+  .model-pill.active[data-provider="gemini"] { background: var(--gemini-blue); border-color: var(--gemini-blue); color: white; }
+  .model-pill.active[data-provider="claude"] { background: var(--claude-orange); border-color: var(--claude-orange); color: white; }
+
+  .model-info-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); background: var(--paper); border: 1px solid var(--border); padding: 4px 9px; border-radius: 2px; margin-bottom: 12px; font-family: 'IBM Plex Mono', monospace; }
+  .model-info-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); display: inline-block; }
+  .model-info-badge.gemini .dot { background: var(--gemini-blue); }
+  .model-info-badge.claude .dot { background: var(--claude-orange); }
+
+  .apikey-wrap { display: flex; align-items: center; position: relative; }
+  .apikey-wrap input { flex: 1; padding: 10px 36px 10px 12px; border: 1px solid var(--border); background: var(--paper); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink); border-radius: 1px; outline: none; transition: border-color 0.2s; letter-spacing: 1px; }
+  .apikey-wrap input:focus { border-color: var(--gemini-blue); }
+  .apikey-toggle { position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: var(--muted); padding: 2px; display: flex; align-items: center; }
+  .apikey-toggle:hover { color: var(--ink); }
+  .apikey-status { font-size: 10px; margin-top: 6px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); }
+  .apikey-status.ok { color: var(--green); }
+  .apikey-status.warn { color: var(--gold); }
+
+  .btn-test-api { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 5px 12px; background: none; border: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); cursor: pointer; border-radius: 2px; transition: all 0.15s; letter-spacing: 1px; }
+  .btn-test-api:hover { border-color: var(--ink); color: var(--ink); }
+  .btn-test-api:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── BOND TYPE SELECTOR ── */
+  .bond-type-section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .bond-type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .bond-type-card { border: 1.5px solid var(--border); border-radius: 2px; padding: 14px 12px; cursor: pointer; transition: all 0.18s; background: var(--paper); text-align: center; }
+  .bond-type-card:hover { border-color: var(--accent); background: var(--blue-light); }
+  .bond-type-card.active { border-color: var(--accent); background: var(--blue-light); box-shadow: inset 0 0 0 1px var(--accent); }
+  .bond-type-icon { font-size: 22px; margin-bottom: 6px; }
+  .bond-type-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+  .bond-type-sub { font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── ISIN INPUT ── */
+  .isin-section { margin-bottom: 20px; }
+  .field-group label { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+  .field-group input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); background: var(--paper); font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 500; color: var(--ink); border-radius: 1px; outline: none; transition: border-color 0.2s; text-transform: uppercase; letter-spacing: 2px; }
+  .field-group input:focus { border-color: var(--accent); }
+  .isin-hint { font-size: 10px; color: var(--muted); margin-top: 6px; font-family: 'IBM Plex Mono', monospace; }
+
+  /* ── BUTTONS ── */
+  .btn-generate { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; background: var(--ink); color: white; border: none; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; border-radius: 1px; transition: background 0.2s; }
+  .btn-generate:hover { background: var(--accent); }
+  .btn-generate:disabled { background: var(--muted); cursor: not-allowed; }
+  .btn-generate svg { width: 16px; height: 16px; }
+
+  .disclaimer { font-size: 10px; color: var(--muted); text-align: center; margin-top: 10px; line-height: 1.6; }
+  .error-box { background: #fff5f5; border: 1px solid #fcc; padding: 14px 18px; border-radius: 2px; font-size: 12px; color: var(--red); margin-top: 14px; display: none; }
+
+  /* ── PROGRESS ── */
+  .progress-wrap { display: none; width: 100%; max-width: 620px; margin-top: 24px; background: white; border: 1px solid var(--border); padding: 20px 24px; }
+  .progress-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .progress-bar-bg { height: 3px; background: var(--cream); border-radius: 2px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.4s ease; }
+  .progress-step { font-size: 12px; color: var(--muted); margin-top: 8px; font-family: 'IBM Plex Mono', monospace; }
+
+  /* ── REPORT AREA ── */
+  #report-area { display: none; width: 100%; max-width: 900px; margin-top: 32px; }
+  .report-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px; }
+  .report-toolbar span { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+  .btn-action { display: flex; align-items: center; gap: 7px; padding: 10px 18px; background: var(--accent); color: white; border: none; font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; border-radius: 1px; transition: opacity 0.2s; }
+  .btn-action:hover { opacity: 0.85; }
+  .btn-action.red { background: var(--gold); }
+
+  /* ── REPORT DOCUMENT ── */
+  .report-doc { background: white; border: 1px solid var(--border); box-shadow: 0 4px 32px rgba(0,0,0,0.08); }
+
+  /* Header */
+  .report-header { padding: 40px 52px 28px; border-bottom: 3px solid var(--ink); }
+  .report-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .report-pub { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+  .report-date-str { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--muted); }
+
+  .bond-type-badge { display: inline-flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: white; background: var(--accent); padding: 3px 10px; margin-bottom: 8px; }
+  .bond-type-badge.govt { background: #2c5f2e; }
+  .bond-type-badge.corp { background: #003087; }
+  .bond-type-badge.fin { background: #7b2d8b; }
+
+  .report-issuer { font-family: 'Playfair Display', serif; font-size: 34px; font-weight: 700; line-height: 1.1; color: var(--ink); margin-bottom: 6px; }
+  .report-bond-name { font-size: 13px; color: var(--muted); font-weight: 300; margin-bottom: 14px; border-left: 2px solid var(--accent); padding-left: 10px; line-height: 1.6; }
+
+  /* KPI Strip - 即時指標橫排 */
+  .kpi-strip { display: flex; gap: 0; margin-top: 16px; border: 1px solid var(--border); background: var(--border); }
+  .kpi-item { flex: 1; background: white; padding: 12px 14px; }
+  .kpi-item:not(:last-child) { border-right: 1px solid var(--border); }
+  .kpi-label { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .kpi-value { font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 500; color: var(--ink); line-height: 1; }
+  .kpi-value.up { color: var(--green); }
+  .kpi-value.down { color: var(--red); }
+  .kpi-value.accent { color: var(--accent); }
+  .kpi-sub { font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+  /* Report Body */
+  .report-body { padding: 0 52px 52px; }
+  .report-section { margin-top: 32px; padding-top: 22px; border-top: 1px solid var(--border); }
+  .section-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 4px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 600; color: var(--ink); margin-bottom: 14px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .intro-text { font-size: 13px; line-height: 1.85; color: #2a2520; font-weight: 300; }
+
+  /* Data Table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+  .data-table th { font-family: 'IBM Plex Mono', monospace; font-size: 8.5px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding: 8px 12px; text-align: left; border-bottom: 2px solid var(--ink); background: var(--paper); }
+  .data-table th.right { text-align: right; }
+  .data-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink); }
+  .data-table td.right { text-align: right; }
+  .data-table td.label { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.5px; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:nth-child(even) td { background: var(--paper); }
+  .td-up { color: var(--green) !important; font-weight: 500; }
+  .td-down { color: var(--red) !important; font-weight: 500; }
+
+  /* Metric Card Grid */
+  .metric-grid { display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border); margin-top: 4px; }
+  .metric-card { background: white; padding: 14px 12px; }
+  .metric-card .m-label { font-size: 8.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .metric-card .m-value { font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 500; color: var(--ink); line-height: 1; }
+  .metric-card .m-sub { font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+  /* Rating Badge */
+  .rating-badge { display: inline-flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; width: 56px; height: 56px; border: 2px solid var(--ink); color: var(--ink); }
+  .rating-badge.ig { border-color: var(--green); color: var(--green); }
+  .rating-badge.hy { border-color: var(--gold); color: var(--gold); }
+
+  /* News items */
+  .news-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .news-item:last-child { border-bottom: none; }
+  .news-tag { display: inline-block; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; padding: 2px 7px; background: var(--blue-light); color: var(--accent); border-radius: 1px; margin-bottom: 5px; font-weight: 500; }
+  .news-tag.event { background: #e8f4e8; color: var(--green); }
+  .news-headline { font-size: 12.5px; font-weight: 500; color: var(--ink); margin-bottom: 4px; line-height: 1.4; }
+  .news-body { font-size: 11.5px; color: var(--muted); line-height: 1.6; font-weight: 300; }
+
+  /* Highlight/Risk lists */
+  .hl-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .hl-list li { display: flex; gap: 9px; font-size: 12.5px; line-height: 1.65; font-weight: 300; color: #2a2520; }
+  .hl-list li::before { content: '▸'; color: var(--green); flex-shrink: 0; margin-top: 1px; font-size: 10px; }
+  .risk-list li::before { content: '▸'; color: var(--red) !important; }
+
+  /* Report Footer */
+  .report-footer { margin: 36px 52px 0; padding: 14px 0; border-top: 2px solid var(--ink); display: flex; justify-content: space-between; align-items: center; }
+  .footer-disclaimer { font-size: 9px; color: var(--muted); max-width: 420px; text-align: right; line-height: 1.5; }
+
+  /* Spinner */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Print */
+  @media print {
+    @page { size: A4; margin: 14mm 13mm; }
+    body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .screen-ui > *:not(#report-area) { display: none !important; }
+    .report-toolbar { display: none !important; }
+    #print-tip { display: none !important; }
+    #report-area { display: block !important; margin: 0; }
+    .report-doc { box-shadow: none !important; border: none !important; }
+    .report-section { page-break-inside: avoid; }
+    .report-header { padding: 28px 40px 22px !important; }
+    .report-body { padding: 0 40px 40px !important; }
+    .report-footer { margin: 28px 40px 0 !important; }
+  }
+</style>
+</head>
+<body>
+<div class="screen-ui">
+
+  <!-- MASTHEAD -->
+  <div class="masthead">
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;line-height:1;">
+        <div style="background:#003087;color:white;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:5px 10px;letter-spacing:1px;">永豐</div>
+        <div style="background:#E2001A;color:white;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:5px 10px;letter-spacing:1px;">銀行</div>
+      </div>
+      <div style="width:1px;height:28px;background:#d8d0c4;"></div>
+      <h1 style="font-size:24px;font-family:'Playfair Display',serif;font-weight:700;color:#0f0f0f;margin:0;">債券研究報告產生器</h1>
+    </div>
+    <div style="font-size:11px;color:#6b6560;font-family:'IBM Plex Sans',sans-serif;font-weight:300;">財務行銷部 · 內部工具</div>
+  </div>
+
+  <!-- INPUT CARD -->
+  <div class="input-card">
+
+    <!-- API Settings -->
+    <div class="api-settings-section">
+      <span class="section-row-label">API 設定 · Provider &amp; Model</span>
+      <div class="provider-toggle">
+        <button class="provider-btn active" data-provider="gemini" onclick="switchProvider('gemini')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Gemini
+        </button>
+        <button class="provider-btn" data-provider="claude" onclick="switchProvider('claude')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.33 5.14L21.5 18.86h-3.1l-.84-2.8H13.6l-.84 2.8H9.66L13.83 5.14h3.5zM15.58 8.4l-1.4 4.9h2.8l-1.4-4.9z" opacity=".8"/></svg>
+          Claude
+        </button>
+      </div>
+
+      <div id="gemini-models" class="model-select-row">
+        <label>模型</label>
+        <div class="model-pill-group">
+          <button class="model-pill active" data-provider="gemini" data-model="gemini-2.5-flash" onclick="selectModel(this)">2.5 Flash ★</button>
+          <button class="model-pill" data-provider="gemini" data-model="gemini-2.5-pro" onclick="selectModel(this)">2.5 Pro</button>
+          <button class="model-pill" data-provider="gemini" data-model="gemini-2.5-flash-lite" onclick="selectModel(this)">2.5 Flash-Lite</button>
+          <button class="model-pill" data-provider="gemini" data-model="gemini-3-flash-preview" onclick="selectModel(this)">3 Flash <span style="font-size:9px;opacity:.7">Preview</span></button>
+        </div>
+      </div>
+      <div id="claude-models" class="model-select-row" style="display:none;">
+        <label>模型</label>
+        <div class="model-pill-group">
+          <button class="model-pill active" data-provider="claude" data-model="claude-sonnet-4-5" onclick="selectModel(this)">Sonnet 4.5</button>
+          <button class="model-pill" data-provider="claude" data-model="claude-opus-4-5" onclick="selectModel(this)">Opus 4.5</button>
+          <button class="model-pill" data-provider="claude" data-model="claude-haiku-4-5-20251001" onclick="selectModel(this)">Haiku 4.5</button>
+        </div>
+      </div>
+
+      <div class="model-info-badge gemini" id="model-badge">
+        <span class="dot"></span>
+        <span id="model-badge-text">gemini-2.5-flash · 推薦首選 · Google Search ON</span>
+      </div>
+
+      <!-- Google Search toggle (Gemini only) -->
+      <div id="gemini-search-row" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--muted);user-select:none;">
+          <input type="checkbox" id="use-google-search" checked style="width:13px;height:13px;accent-color:var(--gemini-blue);">
+          <span>啟用 Google Search Grounding</span>
+        </label>
+        <span style="font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted);background:var(--paper);border:1px solid var(--border);padding:2px 6px;border-radius:2px;">建議開啟以取得即時殖利率/信評</span>
+      </div>
+
+      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:500;" id="apikey-label">Google Gemini API Key</div>
+      <div class="apikey-wrap">
+        <input type="password" id="api-key-input" placeholder="AIzaSy..." oninput="onApiKeyChange()" autocomplete="off"/>
+        <button class="apikey-toggle" onclick="toggleKeyVis()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div class="apikey-status" id="apikey-status">請輸入 API Key 以啟用報告生成</div>
+      <button class="btn-test-api" id="btn-test-api" onclick="testConnection()" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        測試連線
+      </button>
+      <div id="test-result" style="display:none;font-size:10px;font-family:'IBM Plex Mono',monospace;margin-top:6px;padding:6px 10px;border-radius:2px;"></div>
+    </div>
+
+    <!-- BOND TYPE SELECTOR -->
+    <div class="bond-type-section">
+      <span class="section-row-label">步驟 1 · 選擇債券類型</span>
+      <div class="bond-type-grid">
+        <div class="bond-type-card active" data-type="govt" onclick="selectBondType(this)">
+          <div class="bond-type-icon">🏛️</div>
+          <div class="bond-type-name">政府公債</div>
+          <div class="bond-type-sub">Government Bond</div>
+        </div>
+        <div class="bond-type-card" data-type="corp" onclick="selectBondType(this)">
+          <div class="bond-type-icon">🏢</div>
+          <div class="bond-type-name">公司債</div>
+          <div class="bond-type-sub">Corporate Bond</div>
+        </div>
+        <div class="bond-type-card" data-type="fin" onclick="selectBondType(this)">
+          <div class="bond-type-icon">🏦</div>
+          <div class="bond-type-name">金融債</div>
+          <div class="bond-type-sub">Financial Bond</div>
+        </div>
+      </div>
+      <!-- Context hint per type -->
+      <div id="type-hint" style="margin-top:10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted);background:var(--paper);border:1px solid var(--border);padding:7px 11px;border-radius:2px;line-height:1.6;">
+        🏛️ 公債：著重殖利率曲線、DV01、發行國財政指標，不分析信用風險
+      </div>
+    </div>
+
+    <!-- ISIN INPUT -->
+    <div class="isin-section">
+      <span class="section-row-label">步驟 2 · 輸入 ISIN</span>
+      <div class="field-group">
+        <input type="text" id="isin-input" placeholder="US912810TM39" maxlength="12" oninput="onIsinChange()" />
+      </div>
+      <div class="isin-hint" id="isin-hint">ISIN 為 12 碼英數字，如 US912810TM39（美國公債）、XS1234567890（歐元債）</div>
+    </div>
+
+    <button class="btn-generate" id="gen-btn" onclick="generateReport()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      生成債券研究報告
+    </button>
+    <div class="error-box" id="error-box"></div>
+    <div class="disclaimer">本報告由 AI 生成，僅供參考，不構成投資建議。數據可能存在誤差，請以官方資料為準。</div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-label">正在生成報告</div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar"></div></div>
+    <div class="progress-step" id="progress-step">正在分析債券...</div>
+  </div>
+
+  <!-- REPORT AREA -->
+  <div id="report-area">
+    <div class="report-toolbar">
+      <span id="report-meta-label">—</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-action" onclick="printReport()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4"/></svg>
+          匯出 PDF
+        </button>
+        <button class="btn-action red" id="btn-ppt" onclick="generatePPT()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          生成 PPT
+        </button>
+      </div>
+    </div>
+    <div id="print-tip" style="display:none;font-size:11px;color:#6b6560;margin-bottom:10px;padding:10px 14px;background:#faf8f3;border:1px solid #d8d0c4;border-radius:2px;line-height:1.7;">
+      💡 列印建議：目標選「另存為 PDF」· <strong>取消勾選頁首和頁尾</strong> · 邊界選「無」或「最小」
+    </div>
+    <div class="report-doc" id="report-doc"></div>
+  </div>
+
+</div><!-- /screen-ui -->
+
+<script>
+// ════════════════════════════════
+// STATE
+// ════════════════════════════════
+let currentProvider = 'gemini';
+let currentModel = 'gemini-2.5-flash';
+let currentBondType = 'govt';
+
+const BOND_TYPE_CONFIG = {
+  govt: {
+    label: '政府公債', badge: 'govt', icon: '🏛️',
+    hint: '🏛️ 公債：著重殖利率曲線、DV01、發行國財政指標，不分析信用風險',
+    isinExample: '如 US912810TM39（美國公債）、DE0001102614（德國公債）'
+  },
+  corp: {
+    label: '公司債', badge: 'corp', icon: '🏢',
+    hint: '🏢 公司債：核心為信用分析，OAS 利差、財務槓桿（Net Debt/EBITDA）、Interest Coverage',
+    isinExample: '如 US459200HU08（JPMorgan）、XS2345678901（歐元公司債）'
+  },
+  fin: {
+    label: '金融債', badge: 'fin', icon: '🏦',
+    hint: '🏦 金融債：額外分析 CET1/RBC 資本比率、AT1 Trigger、Tier 結構（Senior/T2/AT1）',
+    isinExample: '如 XS1234567890（銀行 AT1）、US06051GHH33（美國銀行 Senior）'
+  }
+};
+
+const MODEL_INFO = {
+  'gemini-2.5-flash':      { label: 'gemini-2.5-flash ★ · 推薦首選', provider: 'gemini' },
+  'gemini-2.5-pro':        { label: 'gemini-2.5-pro · 最高品質', provider: 'gemini' },
+  'gemini-2.5-flash-lite': { label: 'gemini-2.5-flash-lite · 最低成本', provider: 'gemini' },
+  'gemini-3-flash-preview':{ label: 'gemini-3-flash-preview · 最新世代', provider: 'gemini' },
+  'claude-sonnet-4-5':     { label: 'claude-sonnet-4-5 · 均衡智能', provider: 'claude' },
+  'claude-opus-4-5':       { label: 'claude-opus-4-5 · 最高品質', provider: 'claude' },
+  'claude-haiku-4-5-20251001': { label: 'claude-haiku-4-5 · 速度最快', provider: 'claude' },
+};
+
+// ════════════════════════════════
+// BOND TYPE
+// ════════════════════════════════
+function selectBondType(card) {
+  document.querySelectorAll('.bond-type-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  currentBondType = card.dataset.type;
+  const cfg = BOND_TYPE_CONFIG[currentBondType];
+  document.getElementById('type-hint').textContent = cfg.hint;
+  document.getElementById('isin-hint').textContent = 'ISIN 為 12 碼英數字，' + cfg.isinExample;
+}
+
+function onIsinChange() {
+  const v = document.getElementById('isin-input').value.toUpperCase();
+  document.getElementById('isin-input').value = v;
+}
+
+// ════════════════════════════════
+// PROVIDER / MODEL UI
+// ════════════════════════════════
+function switchProvider(provider) {
+  currentProvider = provider;
+  document.querySelectorAll('.provider-btn').forEach(b => b.classList.toggle('active', b.dataset.provider === provider));
+  document.getElementById('gemini-models').style.display = provider === 'gemini' ? 'flex' : 'none';
+  document.getElementById('claude-models').style.display = provider === 'claude' ? 'flex' : 'none';
+  document.getElementById('gemini-search-row').style.display = provider === 'gemini' ? 'flex' : 'none';
+
+  if (provider === 'gemini') {
+    currentModel = 'gemini-2.5-flash';
+    document.getElementById('apikey-label').textContent = 'Google Gemini API Key';
+    document.getElementById('api-key-input').placeholder = 'AIzaSy...';
+  } else {
+    currentModel = 'claude-sonnet-4-5';
+    document.getElementById('apikey-label').textContent = 'Anthropic Claude API Key';
+    document.getElementById('api-key-input').placeholder = 'sk-ant-...';
+  }
+  document.querySelectorAll(`#${provider}-models .model-pill`).forEach((p, i) => p.classList.toggle('active', i === 0));
+  updateModelBadge();
+
+  const saved = localStorage.getItem(`api_key_${provider}`);
+  document.getElementById('api-key-input').value = saved || '';
+  onApiKeyChange();
+}
+
+function selectModel(btn) {
+  currentModel = btn.dataset.model;
+  document.querySelectorAll(`#${btn.dataset.provider}-models .model-pill`).forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  updateModelBadge();
+}
+
+function updateModelBadge() {
+  const badge = document.getElementById('model-badge');
+  const info = MODEL_INFO[currentModel] || { label: currentModel, provider: currentProvider };
+  badge.className = `model-info-badge ${currentProvider}`;
+  const searchOn = currentProvider === 'gemini' && document.getElementById('use-google-search')?.checked;
+  const searchTag = currentProvider === 'gemini' ? (searchOn ? ' · 🔍 Search ON' : ' · Search OFF') : '';
+  document.getElementById('model-badge-text').textContent = info.label + searchTag;
+}
+
+// ════════════════════════════════
+// API KEY
+// ════════════════════════════════
+function getApiKey() { return document.getElementById('api-key-input').value.trim(); }
+
+function onApiKeyChange() {
+  const key = getApiKey();
+  const status = document.getElementById('apikey-status');
+  const testBtn = document.getElementById('btn-test-api');
+  document.getElementById('test-result').style.display = 'none';
+
+  if (!key) {
+    status.className = 'apikey-status'; status.textContent = '請輸入 API Key 以啟用報告生成';
+    testBtn.style.display = 'none'; return;
+  }
+  if (currentProvider === 'gemini') {
+    if (key.startsWith('AIza') && key.length > 20) {
+      status.className = 'apikey-status ok'; status.textContent = '✓ Gemini API Key 格式正確';
+      testBtn.style.display = 'inline-flex';
+      localStorage.setItem('api_key_gemini', key);
+    } else {
+      status.className = 'apikey-status warn'; status.textContent = '⚠ Gemini Key 應以 AIzaSy 開頭';
+      testBtn.style.display = 'none';
+    }
+  } else {
+    if (key.startsWith('sk-ant-') && key.length > 20) {
+      status.className = 'apikey-status ok'; status.textContent = '✓ Claude API Key 格式正確';
+      testBtn.style.display = 'inline-flex';
+      localStorage.setItem('api_key_claude', key);
+    } else {
+      status.className = 'apikey-status warn'; status.textContent = '⚠ Claude Key 應以 sk-ant- 開頭';
+      testBtn.style.display = 'none';
+    }
+  }
+}
+
+function toggleKeyVis() {
+  const inp = document.getElementById('api-key-input');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// ════════════════════════════════
+// TEST CONNECTION
+// ════════════════════════════════
+async function testConnection() {
+  const btn = document.getElementById('btn-test-api');
+  const result = document.getElementById('test-result');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-color:rgba(0,0,0,.2);border-top-color:#555;width:10px;height:10px;"></span> 測試中...';
+  result.style.display = 'none';
+  const apiKey = getApiKey();
+  const t0 = Date.now();
+  try {
+    if (currentProvider === 'gemini') {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({contents:[{parts:[{text:'Reply with exactly: OK'}]}]}) });
+      const ms = Date.now() - t0;
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        const msg = err?.error?.message || `HTTP ${res.status}`;
+        if (msg.includes('no longer available')||msg.includes('not available to new users')) throw new Error(`${currentModel} 對新用戶已停用，請改用 2.5 Flash`);
+        throw new Error(msg);
+      }
+      const data = await res.json();
+      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || '（無回應）';
+      showTestResult(true, `連線成功 · ${currentModel} · ${ms}ms · ${reply.slice(0,30)}`);
+    } else {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body: JSON.stringify({model:currentModel,max_tokens:16,messages:[{role:'user',content:'Reply with exactly: OK'}]})
+      });
+      const ms = Date.now() - t0;
+      if (!res.ok) { const err=await res.json().catch(()=>({})); throw new Error(err?.error?.message||`HTTP ${res.status}`); }
+      const data = await res.json();
+      const reply = data?.content?.[0]?.text || '（無回應）';
+      showTestResult(true, `連線成功 · ${currentModel} · ${ms}ms · ${reply.slice(0,30)}`);
+    }
+  } catch(e) {
+    showTestResult(false, e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M5 12h14M12 5l7 7-7 7"/></svg> 測試連線';
+  }
+}
+
+function showTestResult(ok, msg) {
+  const el = document.getElementById('test-result');
+  el.style.display = 'block';
+  el.style.background = ok ? '#f0faf5' : '#fff5f5';
+  el.style.border = ok ? '1px solid #1a6b3c44' : '1px solid #fcc';
+  el.style.color = ok ? '#1a6b3c' : '#c8381a';
+  el.textContent = (ok ? '✓ ' : '✗ ') + msg;
+}
+
+// ════════════════════════════════
+// AI CALLS
+// ════════════════════════════════
+async function callGemini(prompt, systemPrompt) {
+  const apiKey = getApiKey();
+  const useSearch = document.getElementById('use-google-search')?.checked ?? true;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+  const reqBody = { contents:[{parts:[{text: systemPrompt + '\n\n' + prompt}]}] };
+  if (useSearch) reqBody.tools = [{ googleSearch:{} }];
+  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(reqBody) });
+  if (!res.ok) {
+    const errText = await res.text().catch(()=>'');
+    let msg = errText.slice(0,300);
+    try { msg = JSON.parse(errText)?.error?.message || msg; } catch(e) {}
+    if (msg.includes('API key not valid')) throw new Error('Gemini API Key 無效');
+    if (msg.includes('no longer available')||msg.includes('not available to new users')) throw new Error(`模型 ${currentModel} 對新用戶已停用，請改用 gemini-2.5-flash`);
+    if (res.status===404||msg.includes('not found')) throw new Error(`模型 ${currentModel} 不存在`);
+    throw new Error(`Gemini API 錯誤 ${res.status}：${msg}`);
+  }
+  const data = await res.json();
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  return parts.filter(p=>p.text).map(p=>p.text).join('\n');
+}
+
+async function callClaude(prompt, systemPrompt) {
+  const apiKey = getApiKey();
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body: JSON.stringify({ model:currentModel, max_tokens:4096, system:systemPrompt, messages:[{role:'user',content:prompt}] })
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(()=>'');
+    let msg = `HTTP ${res.status}`;
+    try { msg = JSON.parse(errText)?.error?.message || msg; } catch(e) {}
+    if (res.status===401) throw new Error('Claude API Key 無效');
+    if (res.status===404) throw new Error(`模型 ${currentModel} 不存在`);
+    throw new Error(`Claude API 錯誤 ${res.status}：${msg}`);
+  }
+  const data = await res.json();
+  return data?.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n') || '';
+}
+
+async function callAI(prompt, systemPrompt) {
+  return currentProvider === 'gemini' ? callGemini(prompt, systemPrompt) : callClaude(prompt, systemPrompt);
+}
+
+function parseAIJson(raw) {
+  try { return JSON.parse(raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim()); } catch(e) {}
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch(e) {} }
+  throw new Error('無法解析 AI 回應，請重試');
+}
+
+// ════════════════════════════════
+// BUILD PROMPTS BY BOND TYPE
+// ════════════════════════════════
+function buildPrompt(isin, bondType, today, oneMonthAgo) {
+  const searchNote = currentProvider === 'claude'
+    ? '請運用你所知道的最新訓練資料回答，盡可能提供準確的財務與市場數字。'
+    : `請使用 Google Search 搜尋最新資料：
+1. "${isin} bond details issuer maturity coupon"
+2. "${isin} yield spread rating ${today}"
+3. "${isin} news ${today}"`;
+
+  const baseFields = `
+  "isin": "${isin}",
+  "bondType": "${bondType}",
+  "issuerName": "發行人全名",
+  "bondName": "債券完整名稱（含票面利率與到期年份）",
+  "currency": "幣別（USD/EUR/TWD 等）",
+  "coupon": "票面利率（如 4.50%）",
+  "maturity": "到期日（YYYY-MM-DD）",
+  "issueSize": "發行規模（如 USD 1.5B）",
+  "issueDate": "發行日",
+  "tagline": "一句話描述這支債券的定位，30字以內"`;
+
+  const govtPrompt = `
+請針對政府公債 ISIN ${isin} 生成完整研究報告，以 JSON 格式回傳。
+
+${searchNote}
+
+JSON 結構：
+{
+  ${baseFields},
+  "country": "發行國",
+  "exchange": "交易所/市場（如 NYSE、OTC、TAIPEI EXCHANGE）",
+
+  "kpi": {
+    "ytm": "到期殖利率（如 4.32%）",
+    "duration": "修正存續期間（如 8.4 年）",
+    "dv01": "DV01（如 USD 840 per USD 1M）",
+    "benchmarkSpread": "vs 基準利率利差（如 +45 bps vs UST 10Y）",
+    "price": "現價（如 98.25）",
+    "yieldCurvePos": "殖利率曲線位置（如 10Y segment）"
+  },
+
+  "macroContext": {
+    "gdp": "發行國 GDP 成長率（如 2.4%）",
+    "cpi": "通膨率 CPI",
+    "fiscalDeficit": "財政赤字/GDP（如 -3.2%）",
+    "debtToGdp": "公債/GDP（如 125%）",
+    "centralBankRate": "央行政策利率",
+    "monetaryOutlook": "貨幣政策展望（60字）"
+  },
+
+  "yieldCurve": [
+    {"tenor": "2Y", "yield": ""},
+    {"tenor": "5Y", "yield": ""},
+    {"tenor": "10Y", "yield": ""},
+    {"tenor": "30Y", "yield": ""}
+  ],
+
+  "news": [
+    {"date": "YYYY-MM-DD（限 ${oneMonthAgo} 至 ${today} 或即將事件）", "tag": "總經/貨幣政策/財政/即將事件", "headline": "", "summary": "50-70字", "source": ""},
+    {"date": "", "tag": "", "headline": "", "summary": "", "source": ""},
+    {"date": "", "tag": "", "headline": "", "summary": "", "source": ""},
+    {"date": "", "tag": "", "headline": "", "summary": "", "source": ""}
+  ],
+
+  "highlights": ["投資亮點1（40字）", "投資亮點2", "投資亮點3"],
+  "risks": ["風險1（40字）", "風險2", "風險3"]
+}`;
+
+  const corpPrompt = `
+請針對公司債 ISIN ${isin} 生成完整研究報告，以 JSON 格式回傳。
+
+${searchNote}
+
+JSON 結構：
+{
+  ${baseFields},
+  "sector": "所屬產業",
+  "exchange": "交易所/市場",
+  "seniority": "債券層級（Senior Unsecured / Secured / Subordinated）",
+  "callable": "是否含 Call 條款（Yes/No，若 Yes 請列 Call Date）",
+
+  "kpi": {
+    "ytm": "到期殖利率",
+    "oas": "OAS 利差（如 +180 bps）",
+    "gSpread": "G-spread（如 +210 bps）",
+    "rating_sp": "S&P 評級（如 BBB+）",
+    "rating_moodys": "Moody's 評級（如 Baa1）",
+    "rating_fitch": "Fitch 評級（如 BBB+）",
+    "duration": "修正存續期間（年）",
+    "price": "現價"
+  },
+
+  "creditMetrics": {
+    "netDebtEbitda": "Net Debt/EBITDA（如 2.8x）",
+    "interestCoverage": "Interest Coverage Ratio（如 5.2x）",
+    "fcfYield": "FCF Yield（如 6.3%）",
+    "grossMargin": "毛利率",
+    "leverageTrend": "槓桿趨勢（改善/穩定/惡化）",
+    "liquidityNote": "流動性說明（50字）"
+  },
+
+  "ratingHistory": [
+    {"agency": "S&P", "rating": "", "outlook": "穩定/正向/負向", "date": "最近異動日"},
+    {"agency": "Moody's", "rating": "", "outlook": "", "date": ""},
+    {"agency": "Fitch", "rating": "", "outlook": "", "date": ""}
+  ],
+
+  "news": [
+    {"date": "YYYY-MM-DD（限 ${oneMonthAgo} 至 ${today} 或即將事件）", "tag": "財報/業務/評級/即將事件", "headline": "", "summary": "50-70字", "source": ""},
+    {"date": "", "tag": "", "headline": "", "summary": "", "source": ""},
+    {"date": "", "tag": "", "headline": "", "summary": "", "source": ""},
+    {"date": "", "tag": "", "headline": "", "summary": "", "source": ""}
+  ],
+
+  "highlights": ["投資亮點1（40字）", "投資亮點2", "投資亮點3"],
+  "risks": ["風險1（40字）", "風險2", "風險3"]
+}`;
+
+  const finPrompt = `
+請針對金融債 ISIN ${isin} 生成完整研究報告，以 JSON 格式回傳。
+
+${searchNote}
+
+JSON 結構：
+{
+  ${baseFields},
+  "institutionType": "機構類型（商業銀行/投資銀行/保險公司/政策性銀行）",
+  "exchange": "交易所/市場",
+  "tier": "債券層級（Senior Preferred / Senior Non-Preferred / Tier 2 / AT1 / RT1）",
+  "callable": "是否含 Call 條款（Yes/No，若 Yes 請列首次 Call Date）",
+  "country": "發行機構所在國",
+
+  "kpi": {
+    "ytm": "到期殖利率",
+    "oas": "OAS 利差",
+    "rating_sp": "S&P 評級（債券層級評級）",
+    "rating_moodys": "Moody's 評級",
+    "rating_fitch": "Fitch 評級",
+    "duration": "修正存續期間（年）",
+    "price": "現價"
+  },
+
+  "capitalMetrics": {
+    "cet1Ratio": "CET1 比率（銀行適用，如 13.5%）",
+    "totalCapitalRatio": "總資本比率（如 17.2%）",
+    "rbcRatio": "RBC 比率（保險適用，如 280%）",
+    "solvency2": "Solvency II Ratio（歐洲保險適用）",
+    "lcr": "流動性覆蓋率 LCR（銀行適用）",
+    "nsfr": "淨穩定資金比率 NSFR（銀行適用）",
+    "leverageRatio": "槓桿比率",
+    "nplRatio": "不良貸款率 NPL（銀行適用）",
+    "roe": "股東權益報酬率 ROE",
+    "at1TriggerLevel": "AT1 觸發點 CET1 比率（AT1 適用，如 5.125%）",
+    "callDate": "首次 Call 日（AT1/T2 適用）",
+    "extensionRisk": "展延風險評估（AT1 適用，低/中/高）"
+  },
+
+  "ratingHistory": [
+    {"agency": "S&P", "issuerRating": "發行人評級", "bondRating": "債券評級", "outlook": "", "date": ""},
+    {"agency": "Moody's", "issuerRating": "", "bondRating": "", "outlook": "", "date": ""},
+    {"agency": "Fitch", "issuerRating": "", "bondRating": "", "outlook": "", "date": ""}
+  ],
+
+  "news": [
+    {"date": "YYYY-MM-DD（限 ${oneMonthAgo} 至 ${today} 或即將事件）", "tag": "財報/監理/評級/AT1/即將事件", "headline": "", "summary": "50-70字", "source": ""},
+    {"date": "", "tag": "", "headline": "", "summary": "", "source": ""},
+    {"date": "", "tag": "", "headline": "", "summary": "", "source": ""},
+    {"date": "", "tag": "", "headline": "", "summary": "", "source": ""}
+  ],
+
+  "highlights": ["投資亮點1（40字）", "投資亮點2", "投資亮點3"],
+  "risks": ["風險1（40字）", "風險2", "風險3"]
+}`;
+
+  return { govt: govtPrompt, corp: corpPrompt, fin: finPrompt }[bondType];
+}
+
+// ════════════════════════════════
+// GENERATE REPORT
+// ════════════════════════════════
+function setProgress(pct, label) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-step').textContent = label;
+}
+function showError(msg) { const e=document.getElementById('error-box'); e.style.display='block'; e.textContent='⚠ '+msg; }
+function hideError() { document.getElementById('error-box').style.display='none'; }
+
+async function generateReport() {
+  hideError();
+  const apiKey = getApiKey();
+  if (!apiKey) { showError('請先填入 API Key'); return; }
+  if (currentProvider==='gemini' && !apiKey.startsWith('AIza')) { showError('Gemini Key 格式不正確'); return; }
+  if (currentProvider==='claude' && !apiKey.startsWith('sk-ant-')) { showError('Claude Key 格式不正確'); return; }
+
+  const isin = document.getElementById('isin-input').value.trim().toUpperCase();
+  if (!isin || isin.length < 10) { showError('請輸入有效的 ISIN（12碼）'); return; }
+
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 生成中...';
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('report-area').style.display = 'none';
+
+  try {
+    setProgress(10, `[${currentModel}] 搜尋債券基本資料...`);
+
+    const today = new Date();
+    const oneMonthAgo = new Date(today); oneMonthAgo.setMonth(oneMonthAgo.getMonth()-1);
+    const todayStr = today.toISOString().slice(0,10);
+    const oneMonthAgoStr = oneMonthAgo.toISOString().slice(0,10);
+    const bondTypeName = BOND_TYPE_CONFIG[currentBondType].label;
+
+    const systemPrompt = `你是一位專業的固定收益研究分析師，專注於${bondTypeName}分析。
+今天日期是 ${todayStr}。
+你必須嚴格回傳純 JSON，不得包含 Markdown 代碼塊（不要有 \`\`\`json 或 \`\`\`），直接輸出 JSON。
+數字使用合理估計值，若有即時搜尋結果請優先採用。`;
+
+    const prompt = buildPrompt(isin, currentBondType, todayStr, oneMonthAgoStr);
+
+    setProgress(35, `[${currentModel}] 搜尋市場數據與信評...`);
+    const raw = await callAI(prompt, systemPrompt);
+
+    setProgress(75, '解析報告數據...');
+    const data = parseAIJson(raw);
+
+    setProgress(90, '建立報告版面...');
+    window._reportData = data;
+    window._reportBondType = currentBondType;
+    renderReport(data, currentBondType);
+
+    setProgress(100, '完成！');
+    setTimeout(() => {
+      document.getElementById('progress-wrap').style.display = 'none';
+      document.getElementById('report-area').style.display = 'block';
+    }, 400);
+
+  } catch(err) {
+    showError(err.message || '生成失敗，請稍後重試');
+    document.getElementById('progress-wrap').style.display = 'none';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> 生成債券研究報告`;
+  }
+}
+
+// ════════════════════════════════
+// RENDER REPORT
+// ════════════════════════════════
+function renderReport(d, bondType) {
+  const today = new Date().toLocaleDateString('zh-TW', {year:'numeric',month:'long',day:'numeric'});
+  const cfg = BOND_TYPE_CONFIG[bondType];
+  const kpi = d.kpi || {};
+  const news = d.news || [];
+  const highlights = d.highlights || [];
+  const risks = d.risks || [];
+
+  document.getElementById('report-meta-label').textContent = `${d.issuerName || d.isin} · ${cfg.label} · ${today} · ${currentModel}`;
+
+  // ── KPI Strip (type-specific) ──
+  let kpiItems = [];
+  if (bondType === 'govt') {
+    kpiItems = [
+      { label:'到期殖利率 YTM', value: kpi.ytm||'—' },
+      { label:'修正存續期間', value: kpi.duration||'—' },
+      { label:'DV01', value: kpi.dv01||'—' },
+      { label:'基準利差', value: kpi.benchmarkSpread||'—' },
+      { label:'現價', value: kpi.price||'—' },
+      { label:'殖利率曲線', value: kpi.yieldCurvePos||'—' },
+    ];
+  } else if (bondType === 'corp') {
+    kpiItems = [
+      { label:'到期殖利率 YTM', value: kpi.ytm||'—' },
+      { label:'OAS 利差', value: kpi.oas||'—' },
+      { label:'S&P 評級', value: kpi.rating_sp||'—', cls:'accent' },
+      { label:"Moody's 評級", value: kpi.rating_moodys||'—', cls:'accent' },
+      { label:'修正存續期間', value: kpi.duration||'—' },
+      { label:'現價', value: kpi.price||'—' },
+    ];
+  } else { // fin
+    kpiItems = [
+      { label:'到期殖利率 YTM', value: kpi.ytm||'—' },
+      { label:'OAS 利差', value: kpi.oas||'—' },
+      { label:'S&P 評級', value: kpi.rating_sp||'—', cls:'accent' },
+      { label:'CET1 / RBC', value: (d.capitalMetrics?.cet1Ratio || d.capitalMetrics?.rbcRatio || '—') },
+      { label:'債券層級', value: d.tier||'—' },
+      { label:'現價', value: kpi.price||'—' },
+    ];
+  }
+
+  const kpiHtml = kpiItems.map(k => `
+    <div class="kpi-item">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value ${k.cls||''}">${k.value}</div>
+    </div>`).join('');
+
+  // ── Section 02: type-specific detail section ──
+  let section02Html = '';
+  if (bondType === 'govt') {
+    const mc = d.macroContext || {};
+    const yc = d.yieldCurve || [];
+    section02Html = `
+      <div class="report-section">
+        <div class="section-label">02 — Macro Context</div>
+        <div class="two-col">
+          <div>
+            <div class="section-title">發行國總經環境</div>
+            <table class="data-table">
+              <tr><td class="label">GDP 成長率</td><td class="right">${mc.gdp||'—'}</td></tr>
+              <tr><td class="label">通膨率 CPI</td><td class="right">${mc.cpi||'—'}</td></tr>
+              <tr><td class="label">財政赤字 / GDP</td><td class="right">${mc.fiscalDeficit||'—'}</td></tr>
+              <tr><td class="label">公債 / GDP</td><td class="right">${mc.debtToGdp||'—'}</td></tr>
+              <tr><td class="label">央行政策利率</td><td class="right">${mc.centralBankRate||'—'}</td></tr>
+            </table>
+            <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;">${mc.monetaryOutlook||''}</div>
+          </div>
+          <div>
+            <div class="section-title">殖利率曲線快照</div>
+            <table class="data-table">
+              <thead><tr><th>年期</th><th class="right">殖利率</th></tr></thead>
+              <tbody>
+                ${yc.map(y=>`<tr><td class="label">${y.tenor}</td><td class="right">${y.yield||'—'}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+  } else if (bondType === 'corp') {
+    const cm = d.creditMetrics || {};
+    const rh = d.ratingHistory || [];
+    section02Html = `
+      <div class="report-section">
+        <div class="section-label">02 — Credit Analysis</div>
+        <div class="two-col">
+          <div>
+            <div class="section-title">信用指標</div>
+            <table class="data-table">
+              <tr><td class="label">Net Debt / EBITDA</td><td class="right">${cm.netDebtEbitda||'—'}</td></tr>
+              <tr><td class="label">Interest Coverage</td><td class="right">${cm.interestCoverage||'—'}</td></tr>
+              <tr><td class="label">FCF Yield</td><td class="right">${cm.fcfYield||'—'}</td></tr>
+              <tr><td class="label">毛利率</td><td class="right">${cm.grossMargin||'—'}</td></tr>
+              <tr><td class="label">槓桿趨勢</td><td class="right">${cm.leverageTrend||'—'}</td></tr>
+            </table>
+            <div style="margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.65;">${cm.liquidityNote||''}</div>
+          </div>
+          <div>
+            <div class="section-title">信評紀錄</div>
+            <table class="data-table">
+              <thead><tr><th>機構</th><th class="right">評級</th><th class="right">展望</th><th class="right">日期</th></tr></thead>
+              <tbody>
+                ${rh.map(r=>`<tr><td class="label">${r.agency}</td><td class="right" style="color:var(--accent);font-weight:600;">${r.rating||'—'}</td><td class="right">${r.outlook||'—'}</td><td class="right">${r.date||'—'}</td></tr>`).join('')}
+              </tbody>
+            </table>
+            <div style="margin-top:12px;">
+              <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">債券基本條款</div>
+              <table class="data-table">
+                <tr><td class="label">層級</td><td class="right">${d.seniority||'—'}</td></tr>
+                <tr><td class="label">Call 條款</td><td class="right">${d.callable||'—'}</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  } else { // fin
+    const cap = d.capitalMetrics || {};
+    const rh = d.ratingHistory || [];
+    section02Html = `
+      <div class="report-section">
+        <div class="section-label">02 — Capital & Regulatory Metrics</div>
+        <div class="two-col">
+          <div>
+            <div class="section-title">資本適足指標</div>
+            <table class="data-table">
+              <tr><td class="label">CET1 Ratio</td><td class="right">${cap.cet1Ratio||'—'}</td></tr>
+              <tr><td class="label">Total Capital Ratio</td><td class="right">${cap.totalCapitalRatio||'—'}</td></tr>
+              <tr><td class="label">RBC Ratio（保險）</td><td class="right">${cap.rbcRatio||'—'}</td></tr>
+              <tr><td class="label">Solvency II（歐洲保險）</td><td class="right">${cap.solvency2||'—'}</td></tr>
+              <tr><td class="label">LCR</td><td class="right">${cap.lcr||'—'}</td></tr>
+              <tr><td class="label">NSFR</td><td class="right">${cap.nsfr||'—'}</td></tr>
+              <tr><td class="label">NPL Ratio</td><td class="right">${cap.nplRatio||'—'}</td></tr>
+              <tr><td class="label">ROE</td><td class="right">${cap.roe||'—'}</td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="section-title">信評 &amp; 債券結構</div>
+            <table class="data-table" style="margin-bottom:12px;">
+              <thead><tr><th>機構</th><th class="right">發行人</th><th class="right">債券</th><th class="right">展望</th></tr></thead>
+              <tbody>
+                ${rh.map(r=>`<tr><td class="label">${r.agency}</td><td class="right">${r.issuerRating||'—'}</td><td class="right" style="color:var(--accent);font-weight:600;">${r.bondRating||'—'}</td><td class="right">${r.outlook||'—'}</td></tr>`).join('')}
+              </tbody>
+            </table>
+            <table class="data-table">
+              <tr><td class="label">債券層級 Tier</td><td class="right">${d.tier||'—'}</td></tr>
+              <tr><td class="label">首次 Call 日</td><td class="right">${cap.callDate||'—'}</td></tr>
+              ${cap.at1TriggerLevel ? `<tr><td class="label">AT1 Trigger CET1</td><td class="right">${cap.at1TriggerLevel}</td></tr>` : ''}
+              ${cap.extensionRisk ? `<tr><td class="label">展延風險</td><td class="right">${cap.extensionRisk}</td></tr>` : ''}
+            </table>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('report-doc').innerHTML = `
+    <div class="report-header">
+      <div class="report-header-top">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">固定收益研究報告 · 財務行銷部</span>
+        </div>
+        <div class="report-date-str">${today}</div>
+      </div>
+      <div class="bond-type-badge ${bondType}">${cfg.icon} ${cfg.label}</div>
+      <div class="report-issuer">${d.issuerName || d.isin}</div>
+      <div class="report-bond-name">${d.bondName || ''} &nbsp;|&nbsp; ISIN: ${d.isin || ''} &nbsp;|&nbsp; ${d.currency || ''} ${d.coupon || ''} ${d.maturity ? '到期 ' + d.maturity : ''}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">${d.tagline||''}</div>
+      <!-- KPI STRIP -->
+      <div class="kpi-strip">${kpiHtml}</div>
+    </div>
+
+    <div class="report-body">
+
+      <!-- SECTION 01: Bond Overview -->
+      <div class="report-section">
+        <div class="section-label">01 — Bond Overview</div>
+        <div class="two-col">
+          <div>
+            <div class="section-title">債券基本資料</div>
+            <table class="data-table">
+              <tr><td class="label">ISIN</td><td>${d.isin||'—'}</td></tr>
+              <tr><td class="label">發行人</td><td>${d.issuerName||'—'}</td></tr>
+              <tr><td class="label">票面利率</td><td>${d.coupon||'—'}</td></tr>
+              <tr><td class="label">到期日</td><td>${d.maturity||'—'}</td></tr>
+              <tr><td class="label">發行規模</td><td>${d.issueSize||'—'}</td></tr>
+              <tr><td class="label">發行日</td><td>${d.issueDate||'—'}</td></tr>
+              <tr><td class="label">幣別</td><td>${d.currency||'—'}</td></tr>
+              ${d.country ? `<tr><td class="label">國家</td><td>${d.country}</td></tr>` : ''}
+              ${d.sector ? `<tr><td class="label">產業</td><td>${d.sector}</td></tr>` : ''}
+              ${d.institutionType ? `<tr><td class="label">機構類型</td><td>${d.institutionType}</td></tr>` : ''}
+              ${d.exchange ? `<tr><td class="label">市場</td><td>${d.exchange}</td></tr>` : ''}
+            </table>
+          </div>
+          <div>
+            <div class="section-title">市場指標一覽</div>
+            <div class="metric-grid" style="grid-template-columns:1fr 1fr;">
+              ${Object.entries(kpi).slice(0,6).map(([k,v]) => `
+                <div class="metric-card">
+                  <div class="m-label">${k.toUpperCase().replace(/_/g,' ')}</div>
+                  <div class="m-value" style="font-size:15px;">${v||'—'}</div>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 02: type-specific -->
+      ${section02Html}
+
+      <!-- SECTION 03: News -->
+      <div class="report-section">
+        <div class="section-label">03 — Recent News &amp; Events</div>
+        <div class="section-title">近期重要消息</div>
+        ${news.map(n=>`
+        <div class="news-item">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+            <span class="news-date" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);">${n.date||''}</span>
+            <span class="news-tag ${(n.tag||'').includes('即將')?'event':''}">${n.tag||''}</span>
+            ${n.source?`<span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-left:auto;">📎 ${n.source}</span>`:''}
+          </div>
+          <div class="news-headline">${n.headline||''}</div>
+          <div class="news-body">${n.summary||''}</div>
+        </div>`).join('')}
+      </div>
+
+      <!-- SECTION 04: Investment Thesis -->
+      <div class="report-section">
+        <div class="section-label">04 — Investment Thesis</div>
+        <div class="two-col">
+          <div>
+            <div class="section-title" style="color:var(--green);font-size:17px;">投資亮點 Highlights</div>
+            <ul class="hl-list">${highlights.map(h=>`<li>${h}</li>`).join('')}</ul>
+          </div>
+          <div>
+            <div class="section-title" style="color:var(--red);font-size:17px;">主要風險 Key Risks</div>
+            <ul class="hl-list risk-list">${risks.map(r=>`<li>${r}</li>`).join('')}</ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="report-footer">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">財務行銷部 · ${currentModel}</div>
+      <div class="footer-disclaimer">
+        本報告由 AI 自動生成（${currentModel}），內容僅供參考，不構成任何投資建議。<br>
+        數據來源：公開資料，請以官方揭露為準。投資人應自行研判，後果自負。
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════
+// PPT GENERATION
+// ════════════════════════════════
+function generatePPT() {
+  if (!window._reportData) { alert('請先生成報告再匯出 PPT'); return; }
+  const d = window._reportData;
+  const bondType = window._reportBondType || 'govt';
+  const cfg = BOND_TYPE_CONFIG[bondType];
+  const btn = document.getElementById('btn-ppt');
+  btn.disabled = true; btn.textContent = '生成中...';
+
+  try {
+    const pres = new PptxGenJS();
+    pres.layout = 'LAYOUT_16x9';
+    pres.title = (d.issuerName || d.isin) + ' Bond Report';
+
+    const C = {
+      ink:'0f0f0f', paper:'faf8f3', cream:'f2ede3',
+      accent:'003087', gold:'E2001A', muted:'6b6560', border:'d8d0c4',
+      green:'1a6b3c', red:'c8381a', white:'FFFFFF',
+      typeColor: { govt:'2c5f2e', corp:'003087', fin:'7b2d8b' }
+    };
+    const typeColor = C.typeColor[bondType];
+    const kpi = d.kpi || {};
+    const today = new Date().toLocaleDateString('zh-TW');
+
+    const addHeader = (slide, num, en, zh) => {
+      slide.background = { color: C.paper };
+      slide.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.055, fill:{color:C.ink}, line:{color:C.ink} });
+      slide.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:0.18, h:5.63, fill:{color:typeColor}, line:{color:typeColor} });
+      slide.addText(num + ' — ' + en, { x:0.35, y:0.13, w:8, h:0.22, fontSize:7.5, color:typeColor, bold:true, charSpacing:3, fontFace:'Georgia', margin:0 });
+      slide.addText(zh, { x:0.35, y:0.33, w:9.3, h:0.52, fontSize:20, bold:true, color:C.ink, fontFace:'Georgia', margin:0 });
+      slide.addShape(pres.shapes.LINE, { x:0.35, y:0.87, w:9.3, h:0, line:{color:C.border, width:0.75} });
+    };
+
+    const addFooter = (slide) => {
+      slide.addShape(pres.shapes.LINE, { x:0.35, y:5.38, w:9.3, h:0, line:{color:C.ink, width:0.75} });
+      slide.addText((d.isin||'') + ' · ' + cfg.label + ' · ' + currentModel, { x:0.35, y:5.42, w:5, h:0.18, fontSize:7, color:C.muted, fontFace:'Calibri', margin:0 });
+      slide.addText('永豐銀行 財務行銷部 · ' + today, { x:5.35, y:5.42, w:4.3, h:0.18, fontSize:7, color:C.muted, align:'right', fontFace:'Calibri', margin:0 });
+    };
+
+    // ── SLIDE 1: Cover ──
+    const s1 = pres.addSlide();
+    s1.background = { color: C.paper };
+    s1.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:10, h:0.09, fill:{color:C.ink}, line:{color:C.ink} });
+    s1.addShape(pres.shapes.RECTANGLE, { x:0, y:0.09, w:0.25, h:5.54, fill:{color:typeColor}, line:{color:typeColor} });
+    s1.addText('固定收益研究報告 · 財務行銷部', { x:0.42, y:0.2, w:9, h:0.26, fontSize:8, color:typeColor, bold:true, charSpacing:4, fontFace:'Georgia', margin:0 });
+    s1.addShape(pres.shapes.LINE, { x:0.42, y:0.5, w:9.2, h:0, line:{color:C.border, width:0.5} });
+    // Type badge
+    s1.addShape(pres.shapes.RECTANGLE, { x:0.42, y:0.62, w:1.4, h:0.3, fill:{color:typeColor}, line:{color:typeColor} });
+    s1.addText(cfg.icon + ' ' + cfg.label, { x:0.42, y:0.62, w:1.4, h:0.3, fontSize:9, color:C.white, bold:true, align:'center', fontFace:'Calibri', margin:0 });
+    // Issuer name
+    s1.addText(d.issuerName || d.isin, { x:0.42, y:1.0, w:9.2, h:1.1, fontSize:42, bold:true, color:C.ink, fontFace:'Georgia', margin:0 });
+    // Bond name
+    if (d.bondName) s1.addText(d.bondName, { x:0.42, y:2.15, w:9.2, h:0.4, fontSize:13, color:'3a3530', italic:true, fontFace:'Calibri', margin:0 });
+    // Tagline
+    if (d.tagline) {
+      s1.addShape(pres.shapes.RECTANGLE, { x:0.42, y:2.65, w:0.055, h:0.35, fill:{color:typeColor}, line:{color:typeColor} });
+      s1.addText(d.tagline, { x:0.57, y:2.65, w:8.7, h:0.35, fontSize:11, color:C.muted, italic:true, fontFace:'Calibri', margin:0 });
+    }
+    s1.addShape(pres.shapes.LINE, { x:0.42, y:3.15, w:9.2, h:0, line:{color:C.ink, width:1.5} });
+    // KPI row
+    const kpiEntries = Object.entries(kpi).slice(0,4);
+    kpiEntries.forEach(([k, v], i) => {
+      const x = 0.42 + i * 2.32;
+      if (i > 0) s1.addShape(pres.shapes.LINE, { x, y:3.22, w:0, h:0.9, line:{color:C.border, width:0.5} });
+      s1.addText(k.replace(/_/g,' ').toUpperCase(), { x:x+0.1, y:3.22, w:2.1, h:0.22, fontSize:7, color:C.muted, charSpacing:1, margin:0 });
+      s1.addText(v||'—', { x:x+0.1, y:3.44, w:2.1, h:0.55, fontSize:18, bold:true, color:C.ink, fontFace:'Calibri', margin:0 });
+    });
+    s1.addShape(pres.shapes.LINE, { x:0.42, y:4.18, w:9.2, h:0, line:{color:C.ink, width:1.5} });
+    s1.addText('ISIN: ' + (d.isin||'') + '  |  ' + (d.currency||'') + '  ' + (d.coupon||'') + '  |  到期 ' + (d.maturity||''), { x:0.42, y:4.25, w:9.2, h:0.28, fontSize:9, color:C.muted, fontFace:'Calibri', margin:0 });
+    s1.addShape(pres.shapes.LINE, { x:0.42, y:5.38, w:9.2, h:0, line:{color:C.ink, width:0.75} });
+    s1.addText('永豐銀行 · 財務行銷部', { x:0.42, y:5.42, w:9.2, h:0.18, fontSize:7.5, color:C.muted, align:'right', fontFace:'Calibri', margin:0 });
+
+    // ── SLIDE 2: Bond Overview ──
+    const s2 = pres.addSlide();
+    addHeader(s2, '01', 'BOND OVERVIEW', '債券基本資料與市場指標');
+    const overviewRows = [
+      ['發行人', d.issuerName||'—'], ['ISIN', d.isin||'—'], ['票面利率', d.coupon||'—'],
+      ['到期日', d.maturity||'—'], ['發行規模', d.issueSize||'—'], ['幣別', d.currency||'—'],
+      ...(d.country ? [['國家', d.country]] : []),
+      ...(d.sector ? [['產業', d.sector]] : []),
+      ...(d.tier ? [['債券層級', d.tier]] : []),
+    ];
+    const hdrRow2 = [
+      { text:'項目', options:{ bold:true, fill:{color:C.ink}, color:C.white, fontSize:8.5 }},
+      { text:'內容', options:{ bold:true, fill:{color:C.ink}, color:C.white, fontSize:8.5 }},
+    ];
+    const tableRows2 = [hdrRow2, ...overviewRows.map(([k,v],ri) => {
+      const bg = ri%2===0 ? C.white : C.cream;
+      return [{ text:k, options:{fill:{color:bg}, fontSize:9, color:C.muted}}, { text:v, options:{fill:{color:bg}, fontSize:9, bold:true}}];
+    })];
+    s2.addTable(tableRows2, { x:0.35, y:1.05, w:4.5, border:{pt:0.5,color:C.border}, rowH:0.45 });
+
+    // KPI cards right side
+    Object.entries(kpi).slice(0,6).forEach(([k,v],i) => {
+      const col=i%2, row=Math.floor(i/2);
+      const mx=5.1+col*2.3, my=1.05+row*1.38;
+      s2.addShape(pres.shapes.RECTANGLE, { x:mx, y:my, w:2.15, h:1.25, fill:{color:C.white}, line:{color:C.border, width:0.6} });
+      s2.addShape(pres.shapes.RECTANGLE, { x:mx, y:my, w:2.15, h:0.07, fill:{color:typeColor}, line:{color:typeColor} });
+      s2.addText(k.replace(/_/g,' ').toUpperCase(), { x:mx+0.1, y:my+0.12, w:1.95, h:0.22, fontSize:7, color:C.muted, margin:0 });
+      s2.addText(v||'—', { x:mx+0.1, y:my+0.38, w:1.95, h:0.62, fontSize:20, bold:true, color:C.ink, fontFace:'Calibri', margin:0 });
+    });
+    addFooter(s2);
+
+    // ── SLIDE 3: Type-specific ──
+    const s3 = pres.addSlide();
+    if (bondType === 'govt') {
+      addHeader(s3, '02', 'MACRO CONTEXT', '發行國總經環境');
+      const mc = d.macroContext || {};
+      const macroRows = [
+        ['GDP 成長率', mc.gdp||'—'], ['通膨率 CPI', mc.cpi||'—'],
+        ['財政赤字 / GDP', mc.fiscalDeficit||'—'], ['公債 / GDP', mc.debtToGdp||'—'],
+        ['央行政策利率', mc.centralBankRate||'—'],
+      ];
+      const hdr3 = [{text:'指標',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}},{text:'數值',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}}];
+      s3.addTable([hdr3,...macroRows.map(([k,v],ri)=>{const bg=ri%2===0?C.white:C.cream;return [{text:k,options:{fill:{color:bg},fontSize:9,color:C.muted}},{text:v,options:{fill:{color:bg},fontSize:9,bold:true}}]})], { x:0.35, y:1.05, w:4.5, border:{pt:0.5,color:C.border}, rowH:0.5 });
+      if (mc.monetaryOutlook) s3.addText('貨幣政策展望：' + mc.monetaryOutlook, { x:0.35, y:3.85, w:4.5, h:0.8, fontSize:10, color:C.muted, wrap:true, fontFace:'Calibri', margin:0 });
+      const yc = d.yieldCurve || [];
+      if (yc.length) {
+        const hdrYC = [{text:'年期',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}},{text:'殖利率',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}}];
+        s3.addText('殖利率曲線快照', { x:5.1, y:1.0, w:4.5, h:0.3, fontSize:12, bold:true, color:C.ink, fontFace:'Georgia', margin:0 });
+        s3.addTable([hdrYC,...yc.map((y,ri)=>{const bg=ri%2===0?C.white:C.cream;return [{text:y.tenor,options:{fill:{color:bg},fontSize:10,color:C.muted}},{text:y.yield||'—',options:{fill:{color:bg},fontSize:10,bold:true}}]})], { x:5.1, y:1.35, w:4.5, border:{pt:0.5,color:C.border}, rowH:0.5 });
+      }
+    } else if (bondType === 'corp') {
+      addHeader(s3, '02', 'CREDIT ANALYSIS', '信用分析');
+      const cm = d.creditMetrics || {};
+      const cmRows = [
+        ['Net Debt / EBITDA', cm.netDebtEbitda||'—'], ['Interest Coverage', cm.interestCoverage||'—'],
+        ['FCF Yield', cm.fcfYield||'—'], ['毛利率', cm.grossMargin||'—'], ['槓桿趨勢', cm.leverageTrend||'—'],
+      ];
+      const hdr3 = [{text:'指標',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}},{text:'數值',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}}];
+      s3.addTable([hdr3,...cmRows.map(([k,v],ri)=>{const bg=ri%2===0?C.white:C.cream;return [{text:k,options:{fill:{color:bg},fontSize:9,color:C.muted}},{text:v,options:{fill:{color:bg},fontSize:9,bold:true}}]})], { x:0.35, y:1.05, w:4.5, border:{pt:0.5,color:C.border}, rowH:0.5 });
+      const rh = d.ratingHistory || [];
+      if (rh.length) {
+        s3.addText('信評紀錄', { x:5.1, y:1.0, w:4.5, h:0.3, fontSize:12, bold:true, color:C.ink, fontFace:'Georgia', margin:0 });
+        const rhHdr = [{text:'機構',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}},{text:'評級',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}},{text:'展望',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}}];
+        s3.addTable([rhHdr,...rh.map((r,ri)=>{const bg=ri%2===0?C.white:C.cream;return [{text:r.agency,options:{fill:{color:bg},fontSize:9,color:C.muted}},{text:r.rating||'—',options:{fill:{color:bg},fontSize:9,bold:true,color:typeColor}},{text:r.outlook||'—',options:{fill:{color:bg},fontSize:9}}]})], { x:5.1, y:1.35, w:4.5, border:{pt:0.5,color:C.border}, rowH:0.55 });
+      }
+    } else {
+      addHeader(s3, '02', 'CAPITAL METRICS', '資本適足與監理指標');
+      const cap = d.capitalMetrics || {};
+      const capRows = [
+        ['CET1 Ratio', cap.cet1Ratio||'—'], ['Total Capital Ratio', cap.totalCapitalRatio||'—'],
+        ['RBC Ratio', cap.rbcRatio||'—'], ['LCR', cap.lcr||'—'], ['NSFR', cap.nsfr||'—'],
+        ['NPL Ratio', cap.nplRatio||'—'], ['ROE', cap.roe||'—'],
+      ];
+      const hdr3 = [{text:'指標',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}},{text:'數值',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8.5}}];
+      s3.addTable([hdr3,...capRows.map(([k,v],ri)=>{const bg=ri%2===0?C.white:C.cream;return [{text:k,options:{fill:{color:bg},fontSize:9,color:C.muted}},{text:v,options:{fill:{color:bg},fontSize:9,bold:true}}]})], { x:0.35, y:1.05, w:4.5, border:{pt:0.5,color:C.border}, rowH:0.45 });
+      const rh = d.ratingHistory || [];
+      if (rh.length) {
+        s3.addText('信評（發行人 vs 債券層級）', { x:5.1, y:1.0, w:4.5, h:0.3, fontSize:11, bold:true, color:C.ink, fontFace:'Georgia', margin:0 });
+        const rhHdr = [{text:'機構',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8}},{text:'發行人',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8}},{text:'債券',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8}},{text:'展望',options:{bold:true,fill:{color:C.ink},color:C.white,fontSize:8}}];
+        s3.addTable([rhHdr,...rh.map((r,ri)=>{const bg=ri%2===0?C.white:C.cream;return [{text:r.agency,options:{fill:{color:bg},fontSize:8.5,color:C.muted}},{text:r.issuerRating||'—',options:{fill:{color:bg},fontSize:8.5}},{text:r.bondRating||'—',options:{fill:{color:bg},fontSize:8.5,bold:true,color:typeColor}},{text:r.outlook||'—',options:{fill:{color:bg},fontSize:8.5}}]})], { x:5.1, y:1.35, w:4.5, border:{pt:0.5,color:C.border}, rowH:0.55 });
+        // AT1 specific
+        if (cap.at1TriggerLevel) {
+          s3.addShape(pres.shapes.RECTANGLE, { x:5.1, y:3.45, w:4.5, h:1.5, fill:{color:'fff8e1'}, line:{color:'f9a825', width:0.6} });
+          s3.addText('AT1 重要條款', { x:5.2, y:3.55, w:4.2, h:0.28, fontSize:9, bold:true, color:'e65100', margin:0 });
+          s3.addText(`Trigger CET1：${cap.at1TriggerLevel}\nCall Date：${cap.callDate||'—'}\n展延風險：${cap.extensionRisk||'—'}`, { x:5.2, y:3.85, w:4.2, h:0.95, fontSize:9, color:'4a4a4a', wrap:true, fontFace:'Calibri', margin:0 });
+        }
+      }
+    }
+    addFooter(s3);
+
+    // ── SLIDE 4: News ──
+    const s4 = pres.addSlide();
+    addHeader(s4, '03', 'RECENT NEWS & EVENTS', '近期重要消息');
+    const newsItems = (d.news||[]).slice(0,4);
+    newsItems.forEach((n,i) => {
+      const ny = 1.02 + i * 1.06;
+      const bg = i%2===0 ? C.white : C.cream;
+      s4.addShape(pres.shapes.RECTANGLE, { x:0.35, y:ny, w:9.3, h:0.95, fill:{color:bg}, line:{color:C.border, width:0.4} });
+      s4.addShape(pres.shapes.RECTANGLE, { x:0.35, y:ny, w:0.08, h:0.95, fill:{color:typeColor}, line:{color:typeColor} });
+      s4.addShape(pres.shapes.RECTANGLE, { x:0.55, y:ny+0.1, w:0.8, h:0.22, fill:{color:'f0e8e5'}, line:{color:C.accent, width:0.3} });
+      s4.addText(n.tag||'', { x:0.55, y:ny+0.1, w:0.8, h:0.22, fontSize:6.5, color:C.accent, align:'center', bold:true, margin:0 });
+      s4.addText(n.date||'', { x:1.45, y:ny+0.1, w:2, h:0.2, fontSize:7.5, color:C.muted, margin:0 });
+      s4.addText(n.headline||'', { x:0.55, y:ny+0.36, w:9.0, h:0.28, fontSize:10, bold:true, color:C.ink, fontFace:'Calibri', margin:0 });
+      s4.addText(n.summary||'', { x:0.55, y:ny+0.66, w:9.0, h:0.22, fontSize:8.5, color:C.muted, fontFace:'Calibri', margin:0 });
+    });
+    addFooter(s4);
+
+    // ── SLIDE 5: Highlights vs Risks ──
+    const s5 = pres.addSlide();
+    addHeader(s5, '04', 'INVESTMENT THESIS', '投資亮點 vs 主要風險');
+    s5.addShape(pres.shapes.RECTANGLE, { x:0.35, y:1.0, w:4.55, h:4.22, fill:{color:'f4faf7'}, line:{color:C.green, width:0.8} });
+    s5.addShape(pres.shapes.RECTANGLE, { x:0.35, y:1.0, w:4.55, h:0.07, fill:{color:C.green}, line:{color:C.green} });
+    s5.addText('投資亮點  Highlights', { x:0.48, y:1.12, w:4.2, h:0.32, fontSize:11, bold:true, color:C.green, fontFace:'Georgia', margin:0 });
+    s5.addShape(pres.shapes.LINE, { x:0.48, y:1.47, w:4.2, h:0, line:{color:C.green, width:0.4} });
+    if (highlights.length) s5.addText(highlights.map((h,i,a)=>({text:h,options:{bullet:true,breakLine:i<a.length-1,fontSize:10,color:'1a2820',paraSpaceAfter:7,fontFace:'Calibri'}})), { x:0.48, y:1.55, w:4.2, h:3.55, valign:'top', margin:0 });
+
+    s5.addShape(pres.shapes.RECTANGLE, { x:5.1, y:1.0, w:4.55, h:4.22, fill:{color:'fdf5f5'}, line:{color:C.red, width:0.8} });
+    s5.addShape(pres.shapes.RECTANGLE, { x:5.1, y:1.0, w:4.55, h:0.07, fill:{color:C.red}, line:{color:C.red} });
+    s5.addText('主要風險  Key Risks', { x:5.23, y:1.12, w:4.2, h:0.32, fontSize:11, bold:true, color:C.red, fontFace:'Georgia', margin:0 });
+    s5.addShape(pres.shapes.LINE, { x:5.23, y:1.47, w:4.2, h:0, line:{color:C.red, width:0.4} });
+    if (risks.length) s5.addText(risks.map((r,i,a)=>({text:r,options:{bullet:true,breakLine:i<a.length-1,fontSize:10,color:'28101a',paraSpaceAfter:7,fontFace:'Calibri'}})), { x:5.23, y:1.55, w:4.2, h:3.55, valign:'top', margin:0 });
+    addFooter(s5);
+
+    pres.writeFile({ fileName: `${d.isin||'bond'}_${cfg.label}_Report.pptx` });
+
+  } catch(e) {
+    alert('PPT 生成失敗：' + e.message); console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> 生成 PPT`;
+  }
+}
+
+// ════════════════════════════════
+// PRINT
+// ════════════════════════════════
+function printReport() {
+  document.getElementById('print-tip').style.display = 'block';
+  setTimeout(() => window.print(), 300);
+  setTimeout(() => { document.getElementById('print-tip').style.display = 'none'; }, 8000);
+}
+
+// ════════════════════════════════
+// INIT
+// ════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const savedGemini = localStorage.getItem('api_key_gemini');
+  if (savedGemini) { document.getElementById('api-key-input').value = savedGemini; onApiKeyChange(); }
+  document.getElementById('use-google-search').addEventListener('change', updateModelBadge);
+  document.getElementById('isin-input').addEventListener('keydown', e => { if(e.key==='Enter') generateReport(); });
+  updateModelBadge();
+});
+</script>
+</body>
+</html>
