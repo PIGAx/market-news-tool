@@ -336,6 +336,27 @@
       color: #c8181a
     }
 
+    .model-pill {
+      padding: 3px 10px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      color: #555;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .model-pill.active {
+      background: #1a1a2e;
+      color: #fff;
+      border-color: #1a1a2e;
+      font-weight: 600;
+    }
+    .model-pill:hover:not(.active) {
+      background: #e8e8e8;
+      border-color: #999;
+    }
+
     /* AI buttons */
     .btn-row {
       display: flex;
@@ -617,14 +638,50 @@
       font-weight: 600
     }
 
+    /* 封面資料來源：黑色加粗 */
+    .c-src .c-label,
+    .c-src .c-value {
+      color: #000;
+      font-weight: 700
+    }
+
     .r-sect {
       padding: 32px 60px;
-      border-bottom: 1px solid var(--gray-2)
+      border-bottom: 1px solid var(--gray-2);
+      position: relative
     }
 
     .r-sect:last-child {
       border-bottom: none
     }
+
+    .r-cover { position: relative }
+
+    .r-disc { position: relative }
+
+    /* 每個 section 右上角浮動截圖按鈕 */
+    .sec-snap {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(26,26,46,.75);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity .2s;
+      z-index: 10;
+      font-family: inherit
+    }
+    .r-sect:hover .sec-snap,
+    .r-cover:hover .sec-snap,
+    .r-disc:hover .sec-snap { opacity: 1 }
+    .sec-snap:hover { background: #c8181a }
+
+    @media print { .sec-snap { display: none } }
 
     .r-hd {
       display: flex;
@@ -659,13 +716,13 @@
     }
 
     .comm-body {
-      font-size: 15px;
+      font-size: 17px;
       line-height: 2;
       color: #222
     }
 
     .comm-body h3 {
-      font-size: 15px;
+      font-size: 17px;
       font-weight: 700;
       color: var(--black);
       margin: 20px 0 8px;
@@ -713,7 +770,7 @@
     table.dt {
       width: 100%;
       border-collapse: collapse;
-      font-size: 14px
+      font-size: 16px
     }
 
     table.dt thead tr {
@@ -722,10 +779,10 @@
     }
 
     table.dt thead th {
-      padding: 9px 10px;
+      padding: 10px 10px;
       text-align: center;
       font-weight: 600;
-      font-size: 13px;
+      font-size: 15px;
       white-space: nowrap
     }
 
@@ -743,11 +800,11 @@
     }
 
     table.dt tbody td {
-      padding: 8px 10px;
+      padding: 9px 10px;
       text-align: center;
       border-bottom: 1px solid var(--gray-2);
       font-family: var(--fn-mono);
-      font-size: 13.5px;
+      font-size: 15.5px;
       white-space: nowrap
     }
 
@@ -755,13 +812,14 @@
       text-align: left;
       font-family: var(--fn-body);
       font-weight: 600;
-      font-size: 14px;
+      font-size: 16px;
       padding-left: 12px
     }
 
     .src-note {
       font-size: 11px;
-      color: #ccc;
+      color: #000;
+      font-weight: 700;
       margin-top: 4px;
       font-family: var(--fn-mono)
     }
@@ -874,7 +932,7 @@
     table.eco {
       width: 100%;
       border-collapse: collapse;
-      font-size: 14px
+      font-size: 16px
     }
 
     table.eco thead tr {
@@ -883,8 +941,8 @@
     }
 
     table.eco thead th {
-      padding: 9px 12px;
-      font-size: 13px;
+      padding: 10px 12px;
+      font-size: 15px;
       font-weight: 600;
       text-align: center
     }
@@ -899,15 +957,15 @@
     }
 
     table.eco tbody td {
-      padding: 8px 12px;
+      padding: 9px 12px;
       text-align: center;
       border-bottom: 1px solid var(--gray-2);
-      font-size: 13.5px
+      font-size: 15.5px
     }
 
     table.eco tbody td:first-child {
       font-family: var(--fn-mono);
-      font-size: 12.5px;
+      font-size: 14px;
       color: var(--gray-4)
     }
 
@@ -1071,7 +1129,7 @@
 
   <!-- PDF Overlay -->
   <div id="pdf-ov">
-    <div class="pov-t">匯出 PDF 週報</div>
+    <div class="pov-t" id="pov-title">匯出中…</div>
     <div class="pov-thumbs" id="pov-thumbs"></div>
     <div class="pov-prog">
       <div class="pov-meta"><span id="pov-step">準備中…</span><span id="pov-pct">0%</span></div>
@@ -1096,6 +1154,9 @@
       <button class="tb-btn ghost" onclick="exportDraft()" title="匯出 JSON 備份檔（可跨電腦還原）">⬆ 匯出備份</button>
       <label class="tb-btn ghost" style="cursor:pointer" title="從 JSON 備份檔還原所有欄位">⬇ 匯入備份<input type="file" id="import-file" accept=".json" style="display:none" onchange="importDraft(this)"></label>
       <div class="tb-sep"></div>
+      <button class="tb-btn ghost" onclick="exportImages()" title="每頁截圖打包成 ZIP 下載">📷 截圖</button>
+      <button class="tb-btn ghost" onclick="exportPPT()" title="直式 A4 PowerPoint">📊 PPT</button>
+      <button class="tb-btn ghost" onclick="exportDOCX()" title="直式 A4 Word 文件">📄 DOCX</button>
       <button class="tb-btn solid" onclick="exportPDF()">匯出 PDF ↓</button>
     </div>
   </div>
@@ -1119,6 +1180,12 @@
             <button id="test-btn" onclick="testConn()">測試連線</button>
           </div>
           <div class="test-res" id="test-res"></div>
+          <div id="model-selector" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">
+            <button class="model-pill active" data-model="gemini-2.5-flash" onclick="selectModel(this)">2.5 Flash ★</button>
+            <button class="model-pill" data-model="gemini-2.5-pro" onclick="selectModel(this)">2.5 Pro</button>
+            <button class="model-pill" data-model="gemini-2.5-flash-lite" onclick="selectModel(this)">2.5 Lite</button>
+            <button class="model-pill" data-model="gemini-3-flash-preview" onclick="selectModel(this)">3 Flash Preview</button>
+          </div>
         </div>
 
         <div class="block">
@@ -1352,6 +1419,27 @@
       document.getElementById('pane-' + t).classList.add('active');
     }
 
+    /* ── MODEL SELECTOR ── */
+    function selectModel(btn) {
+      var pills = document.querySelectorAll('#model-selector .model-pill');
+      pills.forEach(function(p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      localStorage.setItem('sinopac_gemini_model', btn.getAttribute('data-model'));
+    }
+
+    function getModel() {
+      var saved = localStorage.getItem('sinopac_gemini_model');
+      if (saved) {
+        var pills = document.querySelectorAll('#model-selector .model-pill');
+        pills.forEach(function(p) {
+          if (p.getAttribute('data-model') === saved) { p.classList.add('active'); }
+          else { p.classList.remove('active'); }
+        });
+        return saved;
+      }
+      return 'gemini-2.5-flash';
+    }
+
     /* ── API KEY ── */
     function onKeyInput(val) {
       const k = val.trim();
@@ -1370,7 +1458,7 @@
       btn.disabled = true;
       try {
         const t0 = Date.now();
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`, {
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + getModel() + ':generateContent?key=' + key, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with exactly the word OK' }] }], generationConfig: { maxOutputTokens: 3000 } })
         });
@@ -1413,7 +1501,7 @@
       const timer = setTimeout(() => ctrl.abort(), 90000);
       let r;
       try {
-        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`, {
+        r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + getModel() + ':generateContent?key=' + key, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body), signal: ctrl.signal
         });
@@ -1432,7 +1520,7 @@
     }
 
     /* ── 智慧合併：將新段落插入／替換對應位置，保留另一段不動 ── */
-    const DISCLAIMER = '<p style="font-size:11px;color:#aaa">資料來源：Bloomberg、Refinitiv，永豐銀行整理。</p>';
+    const DISCLAIMER = ''; // 資料來源已在匯出 footer 上，不需在報告內重複顯示
 
     function mergeSection(currentOutput, newContent, sectionType) {
       // 移除 disclaimer（合併後統一加回結尾）
@@ -1470,11 +1558,27 @@
       try {
         const prompt = `你是永豐銀行金融市場處的資深債券分析師。使用繁體中文，語氣如投資銀行研究報告，引用具體數字。
 
+【用語規範（Style Architect 格式，強制執行）】
+回答時請優先使用 Style Architect 格式。翻譯時只能使用台灣繁體中文慣用語，禁止使用中國大陸慣用語。
+強制替換清單（違反即重寫）：
+- Trump → 川普（禁用特朗普）；Powell → 鮑爾（禁用鮑威爾）；Richmond → 里奇蒙（禁用里士滿）
+- Strait of Hormuz / 霍爾木茲海峽 → 荷姆茲海峽
+- Inflation → 通貨膨脹／通膨（禁用通脹）；Stagflation → 停滯性通膨（禁用滯脹）
+- Swap → 交換（禁用調期）；Macroeconomics → 總體經濟（禁用宏觀經濟）；Microeconomics → 個體經濟（禁用微觀經濟）
+- Trillion → 兆元（禁用萬億元）；國債 → 公債；Compliance → 法律遵循（禁用合規）
+- 債券收益率 → 債券殖利率；久期 → 存續期間；對沖 → 避險；二級市場 → 次級市場
+- 芯片 → 晶片；硅片 → 矽晶片；硅谷 → 矽谷
+- 高企 → 居高不下；利好 → 有利於；衝擊 → 影響；向...傾斜 → 朝...方向發展
+- 坐實 → 驗證；審視 → 看待；綁定 → 結合；口徑 → 統計；框架 → 架構；復盤 → 重新檢討
+- 「關口」→ 刪除此詞，勿使用
+
 【重要指示】：只輸出「前週回顧」這一個段落，不要輸出本週展望，不要輸出任何結尾或其他內容。
 
 輸出格式（純 HTML，只用 h3/p/ul/li/strong 標籤，不要 Markdown 或代碼塊符號）：
 <h3>前週回顧</h3>
 接著撰寫3段：殖利率走勢、信用市場表現、資金與總經環境，每段以 <p> 標籤包裹，引用具體數字。
+
+【字數限制】：此「前週回顧」段落純文字總字數請嚴格控制在 250 字以內（因整份市場概況含本週展望合計不得超過 500 字），務必精簡。
 
 【交易員短評（作為前週回顧的唯一依據）】
 ${comment}${outlook ? '\n\n【情境補充】\n' + outlook : ''}`;
@@ -1505,11 +1609,27 @@ ${comment}${outlook ? '\n\n【情境補充】\n' + outlook : ''}`;
 
         const prompt = `你是永豐銀行金融市場處的資深債券分析師。使用繁體中文，語氣如投資銀行研究報告，引用具體數字。
 
+【用語規範（Style Architect 格式，強制執行）】
+回答時請優先使用 Style Architect 格式。翻譯時只能使用台灣繁體中文慣用語，禁止使用中國大陸慣用語。
+強制替換清單（違反即重寫）：
+- Trump → 川普（禁用特朗普）；Powell → 鮑爾（禁用鮑威爾）；Richmond → 里奇蒙（禁用里士滿）
+- Strait of Hormuz / 霍爾木茲海峽 → 荷姆茲海峽
+- Inflation → 通貨膨脹／通膨（禁用通脹）；Stagflation → 停滯性通膨（禁用滯脹）
+- Swap → 交換（禁用調期）；Macroeconomics → 總體經濟（禁用宏觀經濟）；Microeconomics → 個體經濟（禁用微觀經濟）
+- Trillion → 兆元（禁用萬億元）；國債 → 公債；Compliance → 法律遵循（禁用合規）
+- 債券收益率 → 債券殖利率；久期 → 存續期間；對沖 → 避險；二級市場 → 次級市場
+- 芯片 → 晶片；硅片 → 矽晶片；硅谷 → 矽谷
+- 高企 → 居高不下；利好 → 有利於；衝擊 → 影響；向...傾斜 → 朝...方向發展
+- 坐實 → 驗證；審視 → 看待；綁定 → 結合；口徑 → 統計；框架 → 架構；復盤 → 重新檢討
+- 「關口」→ 刪除此詞，勿使用
+
 【重要指示】：只輸出「本週展望」這一個段落，不要輸出前週回顧，不要輸出任何結尾或其他內容。
 
 輸出格式（純 HTML，只用 h3/p/ul/li/strong 標籤，不要 Markdown 或代碼塊符號）：
 <h3>本週展望</h3>
 接著撰寫偏鴿情境與偏鷹情境兩組，各用 <ul><li> 格式列出3-4個要點，引用具體數字。
+
+【字數限制】：此「本週展望」段落純文字總字數請嚴格控制在 250 字以內（因整份市場概況含前週回顧合計不得超過 500 字），務必精簡。
 
 【BBG 新聞原文（本週展望的唯一依據，不得混入其他資訊）】
 ${bbgText}`;
@@ -1531,10 +1651,26 @@ ${bbgText}`;
       const todayStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
       try {
         const prompt = `今天是 ${todayStr}。請使用 Google Search 搜尋過去 7 天最新債券市場新聞，來源限縮在 Yahoo Finance、Bloomberg、Reuters、CNN Business、BBC Business、CNBC、MarketWatch。搜尋重點：美債殖利率、Fed官員言論、IG/HY/EM信用利差、CPI/PPI/就業數據、地緣政治油價。\n\n你是永豐銀行金融市場處的資深債券分析師。使用繁體中文，語氣如投資銀行研究報告，引用具體數字。
+
+【用語規範（Style Architect 格式，強制執行）】
+回答時請優先使用 Style Architect 格式。翻譯時只能使用台灣繁體中文慣用語，禁止使用中國大陸慣用語。
+強制替換清單（違反即重寫）：
+- Trump → 川普（禁用特朗普）；Powell → 鮑爾（禁用鮑威爾）；Richmond → 里奇蒙（禁用里士滿）
+- Strait of Hormuz / 霍爾木茲海峽 → 荷姆茲海峽
+- Inflation → 通貨膨脹／通膨（禁用通脹）；Stagflation → 停滯性通膨（禁用滯脹）
+- Swap → 交換（禁用調期）；Macroeconomics → 總體經濟（禁用宏觀經濟）；Microeconomics → 個體經濟（禁用微觀經濟）
+- Trillion → 兆元（禁用萬億元）；國債 → 公債；Compliance → 法律遵循（禁用合規）
+- 債券收益率 → 債券殖利率；久期 → 存續期間；對沖 → 避險；二級市場 → 次級市場
+- 芯片 → 晶片；硅片 → 矽晶片；硅谷 → 矽谷
+- 高企 → 居高不下；利好 → 有利於；衝擊 → 影響；向...傾斜 → 朝...方向發展
+- 坐實 → 驗證；審視 → 看待；綁定 → 結合；口徑 → 統計；框架 → 架構；復盤 → 重新檢討
+- 「關口」→ 刪除此詞，勿使用
+
 輸出格式（純 HTML，只用 h3/p/ul/li/strong 標籤，不要 Markdown 或代碼塊符號）：
 1. <h3>前週回顧</h3>：根據搜尋到的新聞，撰寫3段（殖利率走勢、信用市場、資金與總經環境）
 2. <h3>本週展望</h3>：根據最新消息，撰寫偏鴿情境與偏鷹情境（ul/li格式）
-3. 結尾：<p style="font-size:11px;color:#aaa">資料來源：Bloomberg、Refinitiv，永豐銀行整理。</p>`;
+
+【字數限制】：前週回顧與本週展望兩段合計純文字總字數請嚴格控制在 500 字以內，務必精簡。`;
         const { text, raw } = await callGemini(key, prompt, true);
         document.getElementById('ai-output').value = text;
         const srcs = raw?.candidates?.[0]?.groundingMetadata?.groundingChunks?.map(c => c?.web?.title || '').filter(Boolean).slice(0, 3) || [];
@@ -1546,14 +1682,31 @@ ${bbgText}`;
       setBtn('btn-auto', 'sp-auto', 'tx-auto', false, '🔍 全自動');
     }
 
+    // 計算市場概況純文字字數（去除 HTML 標籤；中文逐字計、英數逐詞計）
+    var COMMENTARY_LIMIT = 500;
+    function countCommentaryChars(html) {
+      var tmp = document.createElement('div');
+      tmp.innerHTML = html || '';
+      var txt = (tmp.textContent || tmp.innerText || '');
+      var cjk = (txt.match(/[\u3400-\u9fff\uf900-\ufaff\u3000-\u303f]/g) || []).length;
+      var words = (txt.replace(/[\u3400-\u9fff\uf900-\ufaff]/g, ' ').match(/[A-Za-z0-9]+(?:[.,%][0-9]+)?/g) || []).length;
+      return cjk + words;
+    }
+
     function applyCommentary() {
       const text = document.getElementById('ai-output').value.trim();
       const st = document.getElementById('apply-status');
       if (!text) { st.textContent = '⚠ 請先產生或填入 AI 文字'; return }
+      var charCount = countCommentaryChars(text);
+      var overLimit = charCount > COMMENTARY_LIMIT;
       let div = document.querySelector('.comm-body,.comm-empty');
       if (div) {
         div.className = 'comm-body'; div.innerHTML = text;
-        st.textContent = '✓ 已更新市場概況';
+        if (overLimit) {
+          st.innerHTML = '<span style="color:#C8181A;font-weight:700">⚠ 已套用，但市場概況共 ' + charCount + ' 字，已超過 ' + COMMENTARY_LIMIT + ' 字上限，建議精簡以免影響版面。</span>';
+        } else {
+          st.textContent = '✓ 已更新市場概況（' + charCount + '/' + COMMENTARY_LIMIT + ' 字）';
+        }
         document.getElementById('right').scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         const dv = document.getElementById('report-date').value || today();
@@ -1566,7 +1719,7 @@ ${bbgText}`;
       <div class="cover-metas">
         <div><span class="c-label">Report Date</span><span class="c-value">${dv}</span></div>
         ${pv ? `<div><span class="c-label">Period</span><span class="c-value">${pv}</span></div>` : ''}
-        <div><span class="c-label">Source</span><span class="c-value">Bloomberg · Refinitiv</span></div>
+        <div class="c-src"><span class="c-label">Source</span><span class="c-value">Bloomberg · Refinitiv</span></div>
       </div>
     </div>
     <div class="r-sect">
@@ -1663,6 +1816,7 @@ ${bbgText}`;
     </div>`;
       }).join('')}
   <div style="font-size:9px;color:#bbb;padding:3px 12px;font-family:var(--fn-mono)">紅線=最新　灰線=3Y均值　灰底=3Y範圍　右側=歷史分位</div>
+  <div class="src-note">來源：Bloomberg</div>
   </div>`).join('');
     }
 
@@ -1692,6 +1846,7 @@ ${bbgText}`;
           const docStamp = docNo ? `<div class="doc-no-stamp">${docNo}</div>` : '';
           document.getElementById('report').innerHTML = `
       <div class="r-cover">
+        <button class="sec-snap" onclick="snapSection(this,'封面')">📷</button>
         ${logoTag}
         <div class="cover-ey">Fixed Income Weekly · Bank SinoPac Financial Markets Division</div>
         <div class="cover-h1">債券<em>週報</em></div>
@@ -1699,32 +1854,32 @@ ${bbgText}`;
         <div class="cover-metas">
           <div><span class="c-label">Report Date</span><span class="c-value">${dv}</span></div>
           ${pv ? `<div><span class="c-label">Period</span><span class="c-value">${pv}</span></div>` : ''}
-          <div><span class="c-label">Source</span><span class="c-value">Bloomberg · Refinitiv</span></div>
+          <div class="c-src"><span class="c-label">Source</span><span class="c-value">Bloomberg · Refinitiv</span></div>
         </div>
-        ${docStamp}
       </div>
       <div class="r-sect">
+        <button class="sec-snap" onclick="snapSection(this,'市場概況')">📷</button>
         <div class="r-hd"><h2>市場概況與機會</h2></div>
         ${comm ? `<div class="comm-body">${comm}</div>` : `<div class="comm-empty">← 請先在「AI 市場解讀」產生內容後套用</div>`}
-        ${docStamp}
       </div>
       <div class="r-sect">
+        <button class="sec-snap" onclick="snapSection(this,'利差水準')">📷</button>
+        <div class="r-hd"><h2>投資等級債、新興市場及高收益債各產業利差水準</h2></div>
+        ${buildSpread(sp)}
+      </div>
+      <div class="r-sect">
+        <button class="sec-snap" onclick="snapSection(this,'殖利率表')">📷</button>
         <div class="r-hd"><h2>美國公債殖利率變化及公司債指標變動</h2></div>
         ${buildYT(yd.yields, '▸ 殖利率變動（bps）', false)}
         ${buildYT(yd.indices, '▸ 固定收益指數總報酬變動（%）', true)}
-        ${docStamp}
       </div>
       <div class="r-sect">
-        <div class="r-hd"><h2>投資等級債、新興市場及高收益債各產業利差水準</h2></div>
-        ${buildSpread(sp)}
-        ${docStamp}
-      </div>
-      <div class="r-sect">
+        <button class="sec-snap" onclick="snapSection(this,'經濟數據')">📷</button>
         <div class="r-hd"><h2>重要經濟數據</h2></div>
         ${buildEco(ec)}
-        ${docStamp}
       </div>
       <div class="r-disc">
+        <button class="sec-snap" onclick="snapSection(this,'免責聲明')">📷</button>
         <strong>免責聲明</strong>
         <ul style="margin:8px 0 0 16px;line-height:2">
           <li>專業客戶不受金融消費者保護法保障。</li>
@@ -1735,7 +1890,6 @@ ${bbgText}`;
           <li>本報告中所有資訊或預估，變更時本行將不作預告，若資料內容有未盡完善之處，恕不負責。</li>
         </ul>
         <div style="margin-top:10px;opacity:.5">翻轉金融 共創美好生活｜Together, a better life.</div>
-        ${docStamp}
       </div>`;
           st.textContent = '✓ 週報產生完成';
         } catch (e) { st.textContent = '⚠ 解析失敗：' + e.message; console.error(e) }
@@ -1743,39 +1897,338 @@ ${bbgText}`;
       }, 50);
     }
 
-    /* ── PDF EXPORT ── */
-    function loadScript(src) {
-      return new Promise((res, rej) => {
-        if (document.querySelector('script[src="' + src + '"]')) { res(); return }
-        const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s);
-      });
+    /* ── 逐區截圖下載（像 daily report 一樣） ── */
+    async function snapSection(btn, name) {
+      if (!window.html2canvas) {
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+      }
+      var section = btn.parentElement;
+      var oldText = btn.textContent;
+      btn.textContent = '⏳'; btn.disabled = true; btn.style.opacity = '1';
+      try {
+        var canvas = await html2canvas(section, {
+          scale: 2, useCORS: true, backgroundColor: '#ffffff',
+          logging: false, scrollX: 0, scrollY: 0,
+          windowWidth: document.documentElement.scrollWidth,
+          windowHeight: document.documentElement.scrollHeight,
+          ignoreElements: function(el) { return el.classList && el.classList.contains('sec-snap'); }
+        });
+        var dn = getDateName();
+        var a = document.createElement('a');
+        a.download = '債券週報_' + dn + '_' + name + '.png';
+        a.href = canvas.toDataURL('image/png');
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        btn.textContent = '✓';
+        setTimeout(function() { btn.textContent = oldText; btn.disabled = false; btn.style.opacity = ''; }, 1500);
+      } catch (e) {
+        btn.textContent = '✕';
+        console.error(e);
+        setTimeout(function() { btn.textContent = oldText; btn.disabled = false; btn.style.opacity = ''; }, 2000);
+      }
     }
 
-    async function exportPDF() {
-      if (!document.querySelector('.r-cover')) { alert('請先產生週報再匯出 PDF'); return }
-      const ov = document.getElementById('pdf-ov');
-      const fill = document.getElementById('pov-fill');
-      const stepEl = document.getElementById('pov-step');
-      const pctEl = document.getElementById('pov-pct');
-      const subEl = document.getElementById('pov-sub');
-      const thumbs = document.getElementById('pov-thumbs');
-      ov.classList.add('on');
-      const prog = (p, s, sb) => { fill.style.width = p + '%'; pctEl.textContent = p + '%'; if (s) stepEl.textContent = s; if (sb !== undefined) subEl.textContent = sb };
+    /* ── EXPORT ENGINE ── */
+    function loadScript(src) {
+      return new Promise(function(res, rej) {
+        if (document.querySelector('script[src="' + src + '"]')) { res(); return }
+        var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+      });
+    }
+    function showOv(title) {
+      document.getElementById('pov-title').textContent = title;
+      document.getElementById('pov-thumbs').innerHTML = '';
+      document.getElementById('pdf-ov').classList.add('on');
+    }
+    function hideOv() { document.getElementById('pdf-ov').classList.remove('on'); }
+    function makeProgress() {
+      var fill = document.getElementById('pov-fill');
+      var stepEl = document.getElementById('pov-step');
+      var pctEl = document.getElementById('pov-pct');
+      var subEl = document.getElementById('pov-sub');
+      return function(p, s, sb) {
+        fill.style.width = p + '%'; pctEl.textContent = p + '%';
+        if (s) stepEl.textContent = s;
+        if (sb !== undefined) subEl.textContent = sb;
+      };
+    }
+    function getDateName() { return (document.getElementById('report-date').value || 'weekly').replace(/\//g, ''); }
+    function getDocNo() { return (document.getElementById('doc-number') && document.getElementById('doc-number').value || '').trim(); }
+    /* 將文件編號末四碼替換為「實際總頁數」（補零為四位），例：...0004 → ...0005 */
+    function docNoWithPages(docNo, totalPages) {
+      if (!docNo) return docNo;
+      var pageStr = String(totalPages).padStart(4, '0');
+      /* 若尾端為 4 位以上數字，則取代最後四碼；否則直接以頁數取代末四碼 */
+      if (/\d{4}$/.test(docNo)) {
+        return docNo.replace(/\d{4}$/, pageStr);
+      }
+      return docNo + pageStr;
+    }
 
-      try {
-        prog(5, '載入套件…', '');
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const PW = pdf.internal.pageSize.getWidth();   // 210mm
-        const PH = pdf.internal.pageSize.getHeight();  // 297mm
+    var FOOTER_DISCLAIMER = '本文件包含之資訊僅供永豐銀行客戶參閱使用，商品僅為舉例說明之用途，係非推薦該商品，不構成與客戶進行交易之要約，您亦不得向第三人傳播或散佈，永豐銀行就本文件或本文件資料之利用不負任何責任。';
 
-        prog(12, '截圖整份報告…', '這可能需要幾秒');
+    function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+      var lines = [];
+      var line = '';
+      for (var i = 0; i < text.length; i++) {
+        var next = line + text[i];
+        if (ctx.measureText(next).width > maxWidth && line) {
+          lines.push(line);
+          line = text[i];
+          if (maxLines && lines.length >= maxLines) break;
+        } else {
+          line = next;
+        }
+      }
+      if ((!maxLines || lines.length < maxLines) && line) lines.push(line);
+      lines.forEach(function(ln, idx) {
+        ctx.fillText(ln, x, y + idx * lineHeight);
+      });
+      return lines.length;
+    }
 
-        // 整份 report 截成一張完整大圖
-        const report = document.getElementById('report');
-        const fullCanvas = await html2canvas(report, {
+    function fitTextSectionForExport(section, contentRatio) {
+      var clone = section.cloneNode(true);
+      clone.querySelectorAll('.sec-snap').forEach(function(btn) { btn.remove(); });
+
+      var host = document.createElement('div');
+      host.style.position = 'fixed';
+      host.style.left = '-20000px';
+      host.style.top = '0';
+      var isTextPage = !!clone.querySelector('.comm-body');
+      var isSpreadPage = !!clone.querySelector('.spd-grp');
+      var isCoverTextPage = !!clone.querySelector('.r-cover') && !!clone.querySelector('.comm-body');
+      var isMergedPage = clone.classList && clone.classList.contains('export-merged-page');
+      host.style.width = (isTextPage ? 1220 : (isMergedPage ? 1100 : Math.ceil(section.getBoundingClientRect().width || 980))) + 'px';
+      host.style.background = '#fff';
+      host.style.zIndex = '-1';
+      clone.style.width = '100%';
+      clone.style.boxShadow = 'none';
+      host.appendChild(clone);
+      document.body.appendChild(host);
+
+      var targetHeight = host.getBoundingClientRect().width * contentRatio;
+      var body = clone.querySelector('.comm-body');
+      if (body) {
+        var textSection = body.closest('.r-sect') || clone;
+        if (isCoverTextPage) {
+          clone.style.padding = '0';
+          clone.style.borderTop = '5px solid var(--red)';
+          clone.querySelectorAll('.r-cover').forEach(function(cover) {
+            cover.style.padding = '26px 52px 18px';
+            cover.style.borderTop = '0';
+            cover.style.borderBottom = '2px solid var(--gray-2)';
+          });
+          clone.querySelectorAll('.cover-ey').forEach(function(el) {
+            el.style.fontSize = '9px';
+            el.style.marginBottom = '14px';
+          });
+          clone.querySelectorAll('.cover-h1').forEach(function(el) {
+            el.style.fontSize = '38px';
+            el.style.marginBottom = '8px';
+          });
+          clone.querySelectorAll('.cover-dept').forEach(function(el) {
+            el.style.fontSize = '14px';
+            el.style.marginBottom = '20px';
+          });
+          clone.querySelectorAll('.cover-metas').forEach(function(el) {
+            el.style.gap = '32px';
+          });
+          clone.querySelectorAll('.c-label').forEach(function(el) {
+            el.style.fontSize = '10px';
+          });
+          clone.querySelectorAll('.c-value').forEach(function(el) {
+            el.style.fontSize = '17px';
+          });
+          clone.querySelectorAll('.cover-logo').forEach(function(el) {
+            el.style.maxHeight = '42px';
+            el.style.maxWidth = '132px';
+          });
+          textSection.style.borderBottom = '0';
+        }
+
+        var pads = isCoverTextPage ? [40, 36, 32, 28, 24, 20, 16] : [34, 30, 26, 22, 18, 16, 14, 12];
+        var sizes = isCoverTextPage ? [23, 22, 21, 20, 19, 18, 17, 16, 15] : [20, 19, 18, 17, 16, 15, 14, 13];
+        var lineHeights = isCoverTextPage ? [2.05, 1.98, 1.90, 1.82, 1.74, 1.66, 1.58, 1.50, 1.44] : [1.92, 1.84, 1.76, 1.68, 1.60, 1.52, 1.46, 1.40];
+        outer:
+        for (var p = 0; p < pads.length; p++) {
+          if (isCoverTextPage) {
+            textSection.style.padding = pads[p] + 'px 52px';
+          } else {
+            clone.style.padding = pads[p] + 'px 52px';
+          }
+          for (var s = 0; s < sizes.length; s++) {
+            body.style.fontSize = sizes[s] + 'px';
+            body.style.lineHeight = lineHeights[Math.min(s, lineHeights.length - 1)];
+            textSection.querySelectorAll('.r-hd').forEach(function(hd) {
+              hd.style.marginBottom = isCoverTextPage ? '16px' : '';
+              hd.style.paddingBottom = isCoverTextPage ? '12px' : '';
+            });
+            textSection.querySelectorAll('.r-hd h2').forEach(function(h2) {
+              h2.style.fontSize = isCoverTextPage ? '19px' : '';
+            });
+            body.querySelectorAll('h3').forEach(function(h) {
+              h.style.fontSize = Math.max(11, sizes[s]) + 'px';
+              h.style.margin = Math.max(4, Math.round(sizes[s] * (isCoverTextPage ? 0.55 : 0.8))) + 'px 0 4px';
+            });
+            body.querySelectorAll('p').forEach(function(pEl) {
+              pEl.style.marginBottom = Math.max(3, Math.round(sizes[s] * (isCoverTextPage ? 0.28 : 0.45))) + 'px';
+            });
+            body.querySelectorAll('li').forEach(function(li) {
+              li.style.marginBottom = '2px';
+            });
+            if (clone.scrollHeight <= targetHeight) break outer;
+          }
+        }
+      }
+
+      if (isSpreadPage) {
+        clone.style.padding = '24px 54px';
+        clone.querySelectorAll('.r-hd').forEach(function(hd) {
+          hd.style.marginBottom = '14px';
+          hd.style.paddingBottom = '9px';
+        });
+        clone.querySelectorAll('.r-hd h2').forEach(function(h2) {
+          h2.style.fontSize = '16px';
+        });
+        clone.querySelectorAll('.spd-grp').forEach(function(grp) {
+          grp.style.marginBottom = '16px';
+        });
+        clone.querySelectorAll('.spd-title').forEach(function(title) {
+          title.style.fontSize = '11px';
+          title.style.padding = '5px 12px';
+        });
+        clone.querySelectorAll('.spd-hd').forEach(function(row) {
+          row.style.fontSize = '9px';
+          row.style.padding = '3px 10px';
+        });
+        clone.querySelectorAll('.spd-row').forEach(function(row) {
+          row.style.fontSize = '11px';
+          row.style.padding = '4px 10px';
+        });
+        clone.querySelectorAll('.spd-row > span:first-child').forEach(function(cell) {
+          cell.style.fontSize = '11px';
+        });
+        clone.querySelectorAll('.kl').forEach(function(kl) {
+          kl.style.height = '14px';
+          kl.style.minWidth = '104px';
+        });
+        clone.querySelectorAll('.kl-avg, .kl-now').forEach(function(mark) {
+          mark.style.height = '14px';
+        });
+        clone.querySelectorAll('.kl-pct').forEach(function(pct) {
+          pct.style.fontSize = '8px';
+        });
+      }
+
+      // 合併頁（殖利率＋經濟數據）：依實際高度自動縮放，確保完整塞入一頁
+      var fitShrink = 1;
+      if (isMergedPage) {
+        // 合併區塊之間略收緊間距
+        clone.querySelectorAll('.r-sect').forEach(function(sec, idx) {
+          sec.style.borderBottom = idx === 0 ? '1px solid var(--gray-2)' : '0';
+          sec.style.paddingTop = idx === 0 ? '' : '18px';
+          sec.style.paddingBottom = '18px';
+        });
+        var mh = clone.scrollHeight;
+        if (mh > targetHeight && mh > 0) {
+          fitShrink = Math.max(0.6, targetHeight / mh);
+        }
+      }
+
+      return { host: host, node: clone, shrink: isSpreadPage ? 0.93 : fitShrink };
+    }
+
+    function buildExportSections() {
+      var secs = Array.from(document.querySelectorAll('#report .r-cover, #report .r-sect, #report .r-disc'));
+
+      // 輔助：取得區塊標題文字
+      function secTitle(el) {
+        var h = el.querySelector('.r-hd h2');
+        return h ? (h.textContent || '').trim() : '';
+      }
+
+      var result = [];
+      var i = 0;
+
+      // 1) 封面 + 市場概況（合併為第一頁）
+      if (secs.length >= 2 && secs[0].classList.contains('r-cover') && secs[1].querySelector('.comm-body, .comm-empty')) {
+        var firstPage = document.createElement('div');
+        firstPage.className = 'export-cover-text-page';
+        firstPage.appendChild(secs[0].cloneNode(true));
+        firstPage.appendChild(secs[1].cloneNode(true));
+        result.push(firstPage);
+        i = 2;
+      }
+
+      // 2) 逐塊處理：「殖利率/公司債指標」與緊鄰的「重要經濟數據」合併同頁
+      for (; i < secs.length; i++) {
+        var cur = secs[i];
+        var title = secTitle(cur);
+        var isYield = /殖利率/.test(title) && /公司債/.test(title);
+        if (isYield && i + 1 < secs.length && /重要經濟數據/.test(secTitle(secs[i + 1]))) {
+          var merged = document.createElement('div');
+          merged.className = 'export-merged-page';
+          merged.appendChild(cur.cloneNode(true));
+          merged.appendChild(secs[i + 1].cloneNode(true));
+          result.push(merged);
+          i++; // 跳過已合併的下一塊
+        } else {
+          result.push(cur);
+        }
+      }
+
+      return result.length ? result : secs;
+    }
+
+    /*
+     * Section-first export:
+     * each report block becomes one A4 page. This avoids the old long-canvas
+     * slicing behavior that could split text/tables at awkward page positions.
+     */
+    async function buildSectionPages(prog) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+
+      var secs = buildExportSections();
+      if (!secs.length) return [];
+
+      var OUT_W = 1600;
+      var OUT_H = Math.round(OUT_W * 297 / 210);
+      var PAD_X = Math.round(OUT_W * 0.045);
+      var PAD_TOP = Math.round(OUT_W * 0.040);
+      var FOOTER_H = Math.round(OUT_W * 0.078);
+      var CONTENT_W = OUT_W - PAD_X * 2;
+      var CONTENT_H = OUT_H - PAD_TOP - FOOTER_H - Math.round(OUT_W * 0.015);
+      var CONTENT_RATIO = CONTENT_H / CONTENT_W;
+      var totalPages = secs.length;
+      var docNo = docNoWithPages(getDocNo(), totalPages);
+      // 依最終總頁數刷新原始 DOM 的文件編號戳記，並重建 sections 以帶入正確戳記
+      if (docNo) {
+        document.querySelectorAll('#report .doc-no-stamp').forEach(function(el) { el.textContent = docNo; });
+        secs = buildExportSections();
+      }
+
+      var thumbs = document.getElementById('pov-thumbs');
+      thumbs.innerHTML = '';
+      var tEls = [];
+      for (var ti = 0; ti < Math.min(totalPages, 6); ti++) {
+        var dv = document.createElement('div');
+        dv.className = 'pov-thumb';
+        dv.innerHTML = '<div style="padding:3px;font-size:6px;color:#aaa;font-family:monospace">P' + (ti + 1) + '</div>';
+        thumbs.appendChild(dv);
+        tEls.push(dv);
+      }
+
+      var pages = [];
+      for (var pi = 0; pi < secs.length; pi++) {
+        prog(Math.round(10 + (pi / totalPages) * 78), 'Rendering page ' + (pi + 1) + '/' + totalPages, '');
+        var idx = Math.min(pi, tEls.length - 1);
+        tEls.forEach(function(t, j) {
+          t.classList.toggle('cur', j === idx);
+          if (j < idx) t.classList.add('done');
+        });
+
+        var prepared = fitTextSectionForExport(secs[pi], CONTENT_RATIO);
+        var sectionCanvas = await html2canvas(prepared.node, {
           scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
@@ -1783,107 +2236,419 @@ ${bbgText}`;
           scrollX: 0,
           scrollY: 0,
           windowWidth: document.documentElement.scrollWidth,
-          windowHeight: document.documentElement.scrollHeight
-        });
-
-        prog(55, '計算切割點…', '');
-
-        const CW = fullCanvas.width;         // canvas 實際寬
-        const mmPerCpx = PW / CW;              // 1 canvas px = 多少 mm
-        const PAGE_H = Math.floor(PH / mmPerCpx); // 一頁 A4 對應 canvas px 高度
-
-        // 找各 r-sect / r-disc 的底部位置（不含 r-cover，避免封面獨佔一頁留白）
-        const secs = Array.from(document.querySelectorAll('#report .r-sect,#report .r-disc'));
-        const reportTop = report.getBoundingClientRect().top + window.scrollY;
-        const secBottoms = secs.map(s => {
-          const b = s.getBoundingClientRect().bottom + window.scrollY;
-          return Math.round((b - reportTop) * 2); // x2 because scale=2
-        });
-
-        // 智慧切割：以 PAGE_H 為基準，若最後 15% 範圍內有 section 邊界則吸附
-        const SNAP = Math.floor(PAGE_H * 0.15);
-        const cuts = [0];
-        let pos = 0;
-
-        while (pos < fullCanvas.height) {
-          const target = pos + PAGE_H;
-          if (target >= fullCanvas.height) break;
-
-          // 在 (target - SNAP) ~ target 之間找最近的 section 底部
-          let snapTo = target;
-          let minDist = Infinity;
-          for (const bot of secBottoms) {
-            if (bot > pos && bot <= target && (target - bot) < SNAP) {
-              const d = target - bot;
-              if (d < minDist) { minDist = d; snapTo = bot; }
-            }
+          windowHeight: document.documentElement.scrollHeight,
+          ignoreElements: function(el) {
+            return el.classList && el.classList.contains('sec-snap');
           }
-          cuts.push(snapTo);
-          pos = snapTo;
+        });
+        prepared.host.remove();
+
+        var sc = document.createElement('canvas');
+        sc.width = OUT_W;
+        sc.height = OUT_H;
+        var ctx = sc.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, OUT_W, OUT_H);
+
+        var ratio = Math.min(CONTENT_W / sectionCanvas.width, CONTENT_H / sectionCanvas.height) * (prepared.shrink || 1);
+        var drawW = Math.round(sectionCanvas.width * ratio);
+        var drawH = Math.round(sectionCanvas.height * ratio);
+        var drawX = Math.round((OUT_W - drawW) / 2);
+        var drawY = PAD_TOP;
+        ctx.drawImage(sectionCanvas, 0, 0, sectionCanvas.width, sectionCanvas.height, drawX, drawY, drawW, drawH);
+
+        var lineY = OUT_H - FOOTER_H;
+        ctx.strokeStyle = '#c8181a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(PAD_X, lineY);
+        ctx.lineTo(OUT_W - PAD_X, lineY);
+        ctx.stroke();
+
+        ctx.fillStyle = '#999999';
+        ctx.font = Math.round(OUT_W * 0.0095) + 'px "Noto Sans TC", Arial, sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        var pageY = lineY + Math.round(FOOTER_H * 0.30);
+        ctx.fillText(String(pi + 1), PAD_X, pageY);
+        if (docNo) {
+          ctx.textAlign = 'right';
+          ctx.fillText(docNo, OUT_W - PAD_X, pageY);
         }
+        ctx.textAlign = 'left';
+        var noteX = PAD_X + Math.round(OUT_W * 0.060);
+        var noteW = OUT_W - PAD_X * 2 - Math.round(OUT_W * 0.240);
+        // 免責警語：紅色加粗
+        ctx.fillStyle = '#C8181A';
+        ctx.font = '700 ' + Math.round(OUT_W * 0.0095) + 'px "Noto Sans TC", Arial, sans-serif';
+        wrapCanvasText(
+          ctx,
+          FOOTER_DISCLAIMER,
+          noteX,
+          lineY + Math.round(FOOTER_H * 0.24),
+          noteW,
+          Math.round(OUT_W * 0.014),
+          2
+        );
+        ctx.textAlign = 'left';
+        // 資料來源：黑色加粗
+        var srcTxt = '資料來源：Bloomberg、Refinitiv，永豐銀行整理。';
+        var sloganTxt = '  ｜  翻轉金融 共創美好生活 ｜ Together, a better life.';
+        var srcY = lineY + Math.round(FOOTER_H * 0.76);
+        ctx.fillStyle = '#000000';
+        ctx.font = '700 ' + Math.round(OUT_W * 0.009) + 'px "Noto Sans TC", Arial, sans-serif';
+        ctx.fillText(srcTxt, noteX, srcY);
+        var srcW = ctx.measureText(srcTxt).width;
+        // 標語：維持原灰色
+        ctx.fillStyle = '#999999';
+        ctx.font = Math.round(OUT_W * 0.009) + 'px "Noto Sans TC", Arial, sans-serif';
+        ctx.fillText(sloganTxt, noteX + srcW, srcY);
 
-        // 縮圖列
-        thumbs.innerHTML = '';
-        const tEls = [];
-        const nPages = cuts.length;
-        for (let i = 0; i < Math.min(nPages, 5); i++) {
-          const d = document.createElement('div'); d.className = 'pov-thumb';
-          d.innerHTML = '<div style="padding:3px;font-size:6px;color:#aaa;font-family:monospace">頁' + (i + 1) + '</div>';
-          thumbs.appendChild(d); tEls.push(d);
+        var jpegData = sc.toDataURL('image/jpeg', 0.94);
+        if (idx < tEls.length) {
+          var thumb = document.createElement('img');
+          thumb.src = jpegData;
+          tEls[idx].innerHTML = '';
+          tEls[idx].appendChild(thumb);
         }
+        pages.push({ jpegData: jpegData, w: OUT_W, h: OUT_H });
+      }
+      tEls.forEach(function(t) { t.classList.remove('cur'); });
+      return pages;
+    }
 
-        // 按切割點輸出每頁
-        const totalH = fullCanvas.height;
-        const pdfDocNo = document.getElementById('doc-number').value.trim();
-        for (let pi = 0; pi < cuts.length; pi++) {
-          const yStart = cuts[pi];
-          const yEnd = pi + 1 < cuts.length ? cuts[pi + 1] : totalH;
-          const slH = Math.min(yEnd - yStart, totalH - yStart);
-          if (slH <= 0) continue;
+    /*
+     * ===== 核心匯出引擎 =====
+     * 1. 整份報告截一張大圖
+     * 2. 以 section 邊界貪心切頁
+     * 3. 每頁產出固定 A4 高度的 canvas，底部畫 footer
+     * 4. 回傳 [{jpegData, w, h}]，所有匯出格式共用
+     */
+    async function buildFinalPages(prog) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
 
-          const ti = Math.min(pi, tEls.length - 1);
-          tEls.forEach((t, j) => { t.classList.toggle('cur', j === ti); if (j < ti) t.classList.add('done'); });
-          prog(Math.round(58 + (pi / cuts.length) * 38), '輸出第' + (pi + 1) + '/' + cuts.length + '頁…', '');
+      // 1. 整份截圖
+      prog(10, '截圖整份報告…', '這可能需要幾秒');
+      var report = document.getElementById('report');
+      var fullCanvas = await html2canvas(report, {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff',
+        logging: false, scrollX: 0, scrollY: 0,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight
+      });
 
-          const sc = document.createElement('canvas');
-          sc.width = CW; sc.height = slH;
-          var ctx2d = sc.getContext('2d');
-          ctx2d.drawImage(fullCanvas, 0, yStart, CW, slH, 0, 0, CW, slH);
+      // 2. 計算 A4 頁高
+      prog(45, '計算分頁…', '');
+      var CW = fullCanvas.width;
+      var PW_mm = 210, PH_mm = 297;
+      var mmPerCpx = PW_mm / CW;
+      var PAGE_H = Math.floor(PH_mm / mmPerCpx);
+      var FOOTER_H = Math.round(CW * 0.075); // footer 預留區（三行）
+      var CONTENT_H = PAGE_H - FOOTER_H;
 
-          // 審核文件編號：右下角疊加
-          if (pdfDocNo) {
-            var fontSize = Math.round(CW * 0.013);
-            ctx2d.font = '400 ' + fontSize + 'px "IBM Plex Mono",monospace';
-            ctx2d.fillStyle = 'rgba(170,170,170,0.75)';
-            ctx2d.textAlign = 'right';
-            ctx2d.textBaseline = 'bottom';
-            ctx2d.fillText(pdfDocNo, CW - Math.round(CW * 0.018), slH - Math.round(CW * 0.012));
-          }
+      // 3. Section 邊界
+      var secs = Array.from(document.querySelectorAll('#report .r-cover, #report .r-sect, #report .r-disc'));
+      var reportTop = report.getBoundingClientRect().top + window.scrollY;
+      var secRects = secs.map(function(s) {
+        var r = s.getBoundingClientRect();
+        return { bot: Math.round((r.bottom + window.scrollY - reportTop) * 2) };
+      });
 
-          const imgData = sc.toDataURL('image/jpeg', .93);
+      // 4. 貪心切頁
+      var cuts = [0];
+      var pageStart = 0;
+      var si = 0;
+      while (si < secRects.length) {
+        var lastFitBot = secRects[si].bot;
+        si++;
+        while (si < secRects.length && (secRects[si].bot - pageStart) <= CONTENT_H) {
+          lastFitBot = secRects[si].bot;
+          si++;
+        }
+        if (si < secRects.length) {
+          pageStart = lastFitBot;
+          cuts.push(pageStart);
+        }
+      }
+
+      // 5. 產出最終頁面圖
+      var totalPages = cuts.length;
+      var docNo = docNoWithPages(getDocNo(), totalPages);
+      var fSize = Math.round(CW * 0.014);
+      var fSizeSm = Math.round(CW * 0.012);
+      var padX = Math.round(CW * 0.031);
+
+      var thumbs = document.getElementById('pov-thumbs'); thumbs.innerHTML = '';
+      var tEls = [];
+      for (var ti = 0; ti < Math.min(totalPages, 6); ti++) {
+        var dv = document.createElement('div'); dv.className = 'pov-thumb';
+        dv.innerHTML = '<div style="padding:3px;font-size:6px;color:#aaa;font-family:monospace">頁' + (ti + 1) + '</div>';
+        thumbs.appendChild(dv); tEls.push(dv);
+      }
+
+      var pages = [];
+      for (var pi = 0; pi < cuts.length; pi++) {
+        var yStart = cuts[pi];
+        var yEnd = pi + 1 < cuts.length ? cuts[pi + 1] : fullCanvas.height;
+        var slH = yEnd - yStart;
+        if (slH <= 0) continue;
+
+        prog(Math.round(50 + (pi / totalPages) * 40), '輸出第 ' + (pi + 1) + '/' + totalPages + ' 頁…', '');
+        var idx = Math.min(pi, tEls.length - 1);
+        tEls.forEach(function(t, j) { t.classList.toggle('cur', j === idx); if (j < idx) t.classList.add('done'); });
+
+        // canvas 固定 PAGE_H 高度
+        var sc = document.createElement('canvas');
+        sc.width = CW; sc.height = PAGE_H;
+        var ctx = sc.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, CW, PAGE_H);
+        ctx.drawImage(fullCanvas, 0, yStart, CW, slH, 0, 0, CW, slH);
+
+        // ── footer 分隔線 ──
+        var lineY = PAGE_H - FOOTER_H;
+        ctx.strokeStyle = '#c8181a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(padX, lineY);
+        ctx.lineTo(CW - padX, lineY);
+        ctx.stroke();
+
+        // 統一 footer 字型：灰色小字
+        var fFooter = Math.round(CW * 0.0105);
+        var footerColor = '#999999';
+
+        // ── 第一行：頁碼(左) + 免責聲明 + 文件編號(右) ──
+        var row1Y = lineY + Math.round(FOOTER_H * 0.20);
+        ctx.font = fFooter + 'px "Noto Sans TC", Arial, sans-serif';
+        ctx.fillStyle = footerColor;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        ctx.fillText(String(pi + 1), padX, row1Y);
+        if (docNo) {
+          ctx.textAlign = 'right';
+          ctx.fillText(docNo, CW - padX, row1Y);
+        }
+        var discX = padX + Math.round(CW * 0.04);
+        ctx.textAlign = 'left';
+        // 免責警語：紅色加粗
+        ctx.fillStyle = '#C8181A';
+        ctx.font = '700 ' + fFooter + 'px "Noto Sans TC", Arial, sans-serif';
+        ctx.fillText('本文件包含之資訊僅供永豐銀行客戶參閱使用，商品僅為舉例說明之用途，係非推薦該商品，不構成與客戶進行交易之要約，', discX, row1Y);
+        var row1bY = lineY + Math.round(FOOTER_H * 0.36);
+        ctx.fillText('您亦不得向第三人傳播或散佈，永豐銀行就本文件或本文件資料之利用不負任何責任。', discX, row1bY);
+
+        // ── 第二行：資料來源（置中，黑色加粗） ──
+        var row2Y = lineY + Math.round(FOOTER_H * 0.58);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#000000';
+        ctx.font = '700 ' + fFooter + 'px "Noto Sans TC", Arial, sans-serif';
+        ctx.fillText('資料來源：Bloomberg、Refinitiv，永豐銀行整理。', CW / 2, row2Y);
+
+        // ── 第三行：標語（置中，維持原灰色） ──
+        var row3Y = lineY + Math.round(FOOTER_H * 0.78);
+        ctx.fillStyle = footerColor;
+        ctx.font = fFooter + 'px "Noto Sans TC", Arial, sans-serif';
+        ctx.fillText('翻轉金融 共創美好生活 ｜ Together, a better life.', CW / 2, row3Y);
+
+        var jpegData = sc.toDataURL('image/jpeg', 0.93);
+        if (idx < tEls.length) {
+          var thumb = document.createElement('img'); thumb.src = jpegData;
+          tEls[idx].innerHTML = ''; tEls[idx].appendChild(thumb);
+        }
+        pages.push({ jpegData: jpegData, w: CW, h: PAGE_H });
+        sc = null;
+      }
+      tEls.forEach(function(t) { t.classList.remove('cur'); });
+      return pages;
+    }
+
+    /* ── PDF EXPORT ── */
+    async function exportPDF() {
+      if (!document.querySelector('.r-cover')) { alert('請先產生週報再匯出'); return }
+      showOv('匯出 PDF 週報');
+      var prog = makeProgress();
+      try {
+        prog(5, '載入套件…', '');
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        var pages = await buildSectionPages(prog);
+        prog(93, '合成 PDF…', '');
+        var pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        for (var pi = 0; pi < pages.length; pi++) {
           if (pi > 0) pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', 0, 0, PW, slH * mmPerCpx);
+          pdf.addImage(pages[pi].jpegData, 'JPEG', 0, 0, 210, 297);
+        }
+        pdf.save('債券週報_' + getDateName() + '.pdf');
+        prog(100, '完成！', '共 ' + pages.length + ' 頁');
+        await new Promise(function(r) { setTimeout(r, 1200); }); hideOv();
+      } catch (e) {
+        makeProgress()(0, '發生錯誤', e.message.slice(0, 60));
+        console.error(e);
+        await new Promise(function(r) { setTimeout(r, 2500); }); hideOv();
+      }
+    }
 
-          if (ti < tEls.length) {
-            const img = document.createElement('img'); img.src = imgData;
-            tEls[ti].innerHTML = ''; tEls[ti].appendChild(img);
-          }
+    /* ── 截圖 ZIP 匯出 ── */
+    function loadExportImage(src) {
+      return new Promise(function(resolve, reject) {
+        var img = new Image();
+        img.onload = function() { resolve(img); };
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    async function combineYieldEcoDisclaimerImage(pages) {
+      // 合併後結構為：封面+市場概況、利差水準、殖利率+經濟數據（合併頁）、免責聲明
+      // 取「殖利率+經濟數據合併頁」與「免責聲明頁」（即最後兩頁）拼接
+      if (!pages || pages.length < 2) return null;
+      var targetPages = pages.slice(pages.length - 2);
+      var imgs = [];
+      for (var i = 0; i < targetPages.length; i++) {
+        imgs.push(await loadExportImage(targetPages[i].jpegData));
+      }
+
+      var outW = Math.max.apply(null, targetPages.map(function(p) { return p.w; }));
+      var heights = targetPages.map(function(p) { return Math.round(p.h * outW / p.w); });
+      var outH = heights.reduce(function(sum, h) { return sum + h; }, 0);
+      var canvas = document.createElement('canvas');
+      canvas.width = outW;
+      canvas.height = outH;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, outW, outH);
+
+      var y = 0;
+      for (var j = 0; j < imgs.length; j++) {
+        ctx.drawImage(imgs[j], 0, y, outW, heights[j]);
+        y += heights[j];
+      }
+      return canvas.toDataURL('image/jpeg', 0.94);
+    }
+
+    async function exportImages() {
+      if (!document.querySelector('.r-cover')) { alert('請先產生週報再匯出'); return }
+      showOv('截圖匯出 ZIP');
+      var prog = makeProgress();
+      try {
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+        var pages = await buildSectionPages(prog);
+        prog(93, '打包 ZIP…', '');
+        var zip = new JSZip();
+        var dn = getDateName();
+        var folder = zip.folder('債券週報_' + dn);
+        for (var i = 0; i < pages.length; i++) {
+          folder.file('p' + String(i + 1).padStart(2, '0') + '.jpg', pages[i].jpegData.split(',')[1], { base64: true });
+        }
+        var combined = await combineYieldEcoDisclaimerImage(pages);
+        if (combined) {
+          folder.file('殖利率_經濟數據_免責聲明_合併.jpg', combined.split(',')[1], { base64: true });
+        }
+        var blob = await zip.generateAsync({ type: 'blob' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a'); a.href = url;
+        a.download = '債券週報_' + dn + '_截圖.zip';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function() { URL.revokeObjectURL(url); }, 3000);
+        prog(100, '完成！', '共 ' + pages.length + ' 張 JPG');
+        await new Promise(function(r) { setTimeout(r, 1200); }); hideOv();
+      } catch (e) {
+        makeProgress()(0, '發生錯誤', e.message.slice(0, 60));
+        console.error(e);
+        await new Promise(function(r) { setTimeout(r, 2500); }); hideOv();
+      }
+    }
+
+    /* ── PPT 匯出（直式 A4） ── */
+    async function exportPPT() {
+      if (!document.querySelector('.r-cover')) { alert('請先產生週報再匯出'); return }
+      showOv('匯出 PowerPoint');
+      var prog = makeProgress();
+      try {
+        await loadScript('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js');
+        var pages = await buildSectionPages(prog);
+        prog(93, '建立 PPT…', '');
+        var pptx = new PptxGenJS();
+        pptx.defineLayout({ name: 'A4P', width: 7.5, height: 10 });
+        pptx.layout = 'A4P';
+        for (var i = 0; i < pages.length; i++) {
+          var slide = pptx.addSlide();
+          slide.background = { color: 'FFFFFF' };
+          slide.addImage({ data: pages[i].jpegData, x: 0, y: 0, w: 7.5, h: 10 });
+        }
+        await pptx.writeFile({ fileName: '債券週報_' + getDateName() + '.pptx' });
+        prog(100, '完成！', '共 ' + pages.length + ' 張投影片');
+        await new Promise(function(r) { setTimeout(r, 1200); }); hideOv();
+      } catch (e) {
+        makeProgress()(0, '發生錯誤', e.message.slice(0, 60));
+        console.error(e);
+        await new Promise(function(r) { setTimeout(r, 2500); }); hideOv();
+      }
+    }
+
+    /* ── DOCX 匯出 ── */
+    async function exportDOCX() {
+      if (!document.querySelector('.r-cover')) { alert('請先產生週報再匯出'); return }
+      showOv('匯出 Word 文件');
+      var prog = makeProgress();
+      try {
+        await loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js');
+        var pages = await buildSectionPages(prog);
+        prog(92, '建立 DOCX…', '');
+        await new Promise(function(r) { setTimeout(r, 300); });
+        if (!window.docx) throw new Error('docx 庫載入失敗，請重試');
+        var D = window.docx;
+
+        // A4: 11906 x 16838 DXA, 邊距 360 DXA
+        var A4W = 11906, A4H = 16838, MAR = 360;
+        var contentW_px = Math.round((A4W - MAR * 2) / 1440 * 96); // ~745 px at 96dpi
+        var contentH_px = Math.round((A4H - MAR * 2) / 1440 * 96); // ~1075 px at 96dpi
+
+        var sectionsList = [];
+        for (var i = 0; i < pages.length; i++) {
+          prog(92 + Math.round((i / pages.length) * 6), '寫入第 ' + (i + 1) + '/' + pages.length + ' 頁…', '');
+          var b64 = pages[i].jpegData.split(',')[1];
+          var bin = atob(b64);
+          var bytes = new Uint8Array(bin.length);
+          for (var j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+
+          // 圖片滿版置入（寬=contentW，高依比例，但不超過 contentH）
+          var imgW = contentW_px;
+          var imgH = Math.round((pages[i].h / pages[i].w) * imgW);
+          if (imgH > contentH_px) { imgH = contentH_px; imgW = Math.round((pages[i].w / pages[i].h) * imgH); }
+
+          sectionsList.push({
+            properties: {
+              page: { size: { width: A4W, height: A4H }, margin: { top: MAR, right: MAR, bottom: MAR, left: MAR } }
+            },
+            children: [
+              new D.Paragraph({
+                spacing: { before: 0, after: 0 },
+                children: [new D.ImageRun({
+                  type: 'jpg', data: bytes,
+                  transformation: { width: imgW, height: imgH },
+                  altText: { title: 'p' + (i+1), description: 'page ' + (i+1), name: 'p' + (i+1) }
+                })]
+              })
+            ]
+          });
+          bytes = null;
         }
 
-        tEls.forEach(t => t.classList.remove('cur'));
-        prog(98, '儲存中…', '');
-        await new Promise(r => setTimeout(r, 200));
-        const dn = document.getElementById('report-date').value || 'weekly';
-        pdf.save('債券週報_' + dn.replace(/\//g, '') + '.pdf');
-        prog(100, '完成！', '共 ' + cuts.length + ' 頁');
-        await new Promise(r => setTimeout(r, 1300));
-        ov.classList.remove('on');
-
+        var doc = new D.Document({ sections: sectionsList });
+        prog(98, '打包下載中…', '');
+        var blob = await D.Packer.toBlob(doc);
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a'); a.href = url;
+        a.download = '債券週報_' + getDateName() + '.docx';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function() { URL.revokeObjectURL(url); }, 3000);
+        prog(100, '完成！', '共 ' + pages.length + ' 頁');
+        await new Promise(function(r) { setTimeout(r, 1200); }); hideOv();
       } catch (e) {
-        prog(0, '發生錯誤', e.message.slice(0, 60));
+        makeProgress()(0, '發生錯誤', e.message.slice(0, 80));
         console.error(e);
-        await new Promise(r => setTimeout(r, 2500));
-        ov.classList.remove('on');
+        await new Promise(function(r) { setTimeout(r, 2500); }); hideOv();
       }
     }
 
@@ -1928,8 +2693,7 @@ HY spreads widen 8bps to 315bps; energy sector underperforms`;
 <ul>
   <li><strong>偏鴿情境：</strong>若CPI低於預期，短端利率有機會小幅回落，IG利差具備進一步收窄空間。</li>
   <li><strong>偏鷹／避險情境：</strong>若油價續強、通膨高於預期，2Y與10Y殖利率均可能再次上行，對高存續期資產形成壓力。</li>
-</ul>
-<p style="font-size:11px;color:#aaa">資料來源：Bloomberg、Refinitiv，永豐銀行整理。</p>`;
+</ul>`;
       document.getElementById('apply-status').textContent = '✓ 範例已填入，點「套用」即可';
     }
 
@@ -2104,6 +2868,7 @@ EMUSTRUU\t新興市場\t-0.361\t0.481\t-0.329\t1.679\t9.473\t0.961`;
         document.getElementById('gemini-key').value = saved;
         document.getElementById('test-btn').style.display = 'block';
       }
+      getModel(); // 恢復上次選擇的模型
       var savedDocNo = localStorage.getItem('sinopac_doc_no');
       if (savedDocNo) document.getElementById('doc-number').value = savedDocNo;
       var savedLogo = localStorage.getItem('sinopac_logo_b64');
