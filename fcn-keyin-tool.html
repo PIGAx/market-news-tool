@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FCN Key單工具 · 永豐金融市場處</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
 <style>
 :root{
   --bg:#f5f6f8;--surface:#fff;--surface2:#f0f2f5;
@@ -182,6 +183,18 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .ip-run{padding:5px 12px;border-radius:5px;font-size:11px;font-weight:600;border:none;background:var(--green);color:#fff;cursor:pointer;font-family:var(--sans);transition:opacity .15s;white-space:nowrap}
 .ip-run:hover{opacity:.85}
 .ip-run:disabled{opacity:.4;cursor:not-allowed}
+.ip-mode-tabs{display:flex;gap:0;margin-bottom:6px}
+.ip-mode-tab{padding:5px 14px;font-size:11px;font-weight:600;border:1px solid var(--green-br);background:var(--surface);color:var(--green);cursor:pointer;font-family:var(--sans);transition:all .15s}
+.ip-mode-tab:first-child{border-radius:5px 0 0 5px}
+.ip-mode-tab:last-child{border-radius:0 5px 5px 0;border-left:none}
+.ip-mode-tab.active{background:var(--green);color:#fff}
+.ip-paste-area{display:none;margin-bottom:8px}
+.ip-paste-area.vis{display:block}
+.ip-paste-ta{width:100%;min-height:80px;max-height:160px;padding:8px 10px;border:1px solid var(--green-br);border-radius:var(--r);font-family:var(--mono);font-size:11px;resize:vertical;background:var(--green-bg);color:var(--text);line-height:1.5}
+.ip-paste-ta:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(22,163,74,.12)}
+.ip-paste-ta::placeholder{color:var(--text3)}
+.ip-paste-actions{display:flex;gap:8px;align-items:center;margin-top:6px}
+.ip-paste-hint{font-size:10px;color:var(--text3);flex:1}
 .ip-result-box{background:var(--green-bg);border:1px solid var(--green-br);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;display:none}
 .ip-result-box.vis{display:block}
 .ip-result-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;border-bottom:1px solid var(--green-br)}
@@ -326,8 +339,9 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
       </div>
       <div class="slabel" style="margin-top:16px">說明書 Initial Price</div>
       <div style="font-size:11px;color:var(--text2);line-height:2.0">
-        每筆交易的說明書上傳區在右側 entry card 的<br>「連結標的 &amp; Initial Price」區塊。<br>
-        每筆各自上傳對應產品的說明書，AI 只填入該筆的 IP。
+        每筆交易的 IP 識別在右側 entry card 的<br>「連結標的 &amp; Initial Price」區塊。<br>
+        <b>上傳說明書</b>：PDF / DOCX / 圖片，AI 識別。<br>
+        <b>貼上表格</b>：直接貼上信件中的 IP 表格。
       </div>
     </div>
   </div>
@@ -805,6 +819,12 @@ function renderEntry({ id, data: d }) {
 
       <div class="divlabel">連結標的 & Initial Price <span class="divtag">IP 需對應說明書</span></div>
 
+      <!-- IP mode tabs -->
+      <div class="ip-mode-tabs" id="iptabs-${id}">
+        <button class="ip-mode-tab active" onclick="switchIPMode(${id},'upload')">📄 上傳說明書</button>
+        <button class="ip-mode-tab" onclick="switchIPMode(${id},'paste')">📋 貼上表格</button>
+      </div>
+
       <!-- Per-entry IP upload bar -->
       <div class="ip-bar" id="ipbar-${id}">
         <span class="ip-bar-label">📄 說明書</span>
@@ -814,6 +834,16 @@ function renderEntry({ id, data: d }) {
         <button class="ip-bar-clear" id="ipdoc-clear-${id}" onclick="clearEntryDoc(${id})" style="display:none">✕</button>
         <button class="ip-run" id="ipdoc-run-${id}" onclick="runEntryIP(${id})" style="display:none" disabled>🔍 識別 IP</button>
       </div>
+
+      <!-- Paste textarea for Natixis-style IP tables -->
+      <div class="ip-paste-area" id="ippaste-${id}">
+        <textarea class="ip-paste-ta" id="ippaste-ta-${id}" placeholder="從信件貼上 Initial Price 表格，例如：&#10;Share&#9;Ticker&#9;Exchange&#9;Initial Price&#10;NVIDIA Corp&#9;NVDA UW&#9;NASDAQ&#9;200.04&#10;AMD&#9;AMD UW&#9;NASDAQ&#9;519.85"></textarea>
+        <div class="ip-paste-actions">
+          <span class="ip-paste-hint">支援 Natixis / 任何含有 Ticker + Initial Price 的表格文字</span>
+          <button class="ip-run" onclick="runPastedIP(${id})">🔍 解析 IP</button>
+        </div>
+      </div>
+
       <div class="ip-result-box" id="ipresult-${id}"></div>
 
       <div class="und-grid">
@@ -890,6 +920,17 @@ function toggleEntry(id) {
 }
 
 // ══════════════════════════════════════════════
+//  IP MODE TABS (upload vs paste)
+// ══════════════════════════════════════════════
+function switchIPMode(id, mode) {
+  const tabs = document.getElementById('iptabs-'+id).querySelectorAll('.ip-mode-tab');
+  tabs.forEach((t, i) => t.classList.toggle('active', (i===0&&mode==='upload')||(i===1&&mode==='paste')));
+  document.getElementById('ipbar-'+id).style.display = mode==='upload' ? '' : 'none';
+  const pasteArea = document.getElementById('ippaste-'+id);
+  pasteArea.classList.toggle('vis', mode==='paste');
+}
+
+// ══════════════════════════════════════════════
 //  PER-ENTRY DOC UPLOAD
 // ══════════════════════════════════════════════
 async function loadEntryDoc(id, file) {
@@ -900,6 +941,29 @@ async function loadEntryDoc(id, file) {
   const isImg  = /\.(png|jpg|jpeg|webp|gif)$/.test(name) || file.type.startsWith('image/');
   if (!isPDF && !isDOCX && !isImg) { toast('不支援此格式，請使用 PDF、DOCX 或圖片', 'error'); return; }
 
+  if (isDOCX) {
+    // Use mammoth.js to extract text from DOCX
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const docxText = result.value;
+      if (!docxText || docxText.trim().length < 20) {
+        toast('DOCX 文字擷取內容過少，請確認檔案', 'warning');
+        return;
+      }
+      entryDocs[id] = { isDOCX: true, isPDF: false, isImg: false, docxText, name: file.name };
+      document.getElementById('ipdoc-name-'+id).textContent = '📄 '+file.name+' (文字已擷取)';
+      document.getElementById('ipdoc-clear-'+id).style.display = '';
+      const runBtn = document.getElementById('ipdoc-run-'+id);
+      runBtn.style.display = ''; runBtn.disabled = false;
+      toast(`已擷取說明書文字：${file.name}`, 'success');
+    } catch(e) {
+      toast('DOCX 讀取失敗：'+e.message, 'error');
+    }
+    return;
+  }
+
+  // PDF / Image: read as base64
   const base64 = await new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => res(r.result.split(',')[1]);
@@ -908,9 +972,9 @@ async function loadEntryDoc(id, file) {
   });
   let mimeType = file.type;
   if (!mimeType || mimeType === 'application/octet-stream')
-    mimeType = isPDF ? 'application/pdf' : isDOCX ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'image/png';
+    mimeType = isPDF ? 'application/pdf' : 'image/png';
 
-  entryDocs[id] = { base64, mimeType, isPDF, isDOCX, isImg, name: file.name };
+  entryDocs[id] = { base64, mimeType, isPDF, isDOCX: false, isImg, name: file.name };
 
   document.getElementById('ipdoc-name-'+id).textContent = '📄 '+file.name;
   document.getElementById('ipdoc-clear-'+id).style.display = '';
@@ -941,10 +1005,6 @@ async function runEntryIP(id) {
   const unds = [1,2,3,4,5].map(i => document.getElementById(`e${id}_und${i}`)?.value.trim()||'').filter(Boolean);
   if (!unds.length) { toast('此筆尚未有連結標的', 'warning'); return; }
 
-  if (doc.isDOCX && currentProvider === 'claude') {
-    toast('Claude 不支援直接讀取 DOCX，請改用 Gemini 或將文件轉存為 PDF', 'warning'); return;
-  }
-
   const runBtn = document.getElementById('ipdoc-run-'+id);
   runBtn.disabled = true; runBtn.textContent = '⏳ 識別中...';
 
@@ -960,7 +1020,13 @@ ${unds.join('、')}
 
   try {
     let extraPart = null;
-    if (currentProvider === 'gemini') {
+    let userMsg = `請從此文件找出以下股票的 Initial Price：${unds.join('、')}`;
+
+    if (doc.isDOCX && doc.docxText) {
+      // DOCX: send extracted text, no binary attachment
+      userMsg = `以下是說明書的文字內容：\n\n${doc.docxText}\n\n請找出以下股票的 Initial Price：${unds.join('、')}`;
+      extraPart = null;
+    } else if (currentProvider === 'gemini') {
       extraPart = { inline_data: { mime_type: doc.mimeType, data: doc.base64 } };
     } else {
       extraPart = doc.isPDF
@@ -968,39 +1034,187 @@ ${unds.join('、')}
         : { type:'image',    source:{ type:'base64', media_type:doc.mimeType,       data:doc.base64 } };
     }
 
-    const rawText = await callAI(key, ipPrompt, `請從此文件找出以下股票的 Initial Price：${unds.join('、')}`, extraPart);
-    const ipMap = parseJSON(rawText);
-
-    // Fill into this entry's IP fields
-    let filled = 0;
-    const rows = unds.map((code, idx) => {
-      const ipEl = document.getElementById(`e${id}_ip${idx+1}`);
-      const price = ipMap[code];
-      if (price != null && !isNaN(Number(price))) {
-        if (ipEl) { ipEl.value = Number(price); ipEl.classList.remove('need'); ipEl.classList.add('auto-filled'); }
-        filled++;
-        return `<div class="ip-result-row"><span class="ip-result-und">${code}</span><span class="ip-result-price">${Number(price).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>`;
-      } else {
-        return `<div class="ip-result-row"><span class="ip-result-und">${code}</span><span class="ip-result-na">未找到</span></div>`;
-      }
-    });
-    recalcPrices(id);
-
-    const resBox = document.getElementById('ipresult-'+id);
-    resBox.innerHTML = `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;letter-spacing:.06em">識別結果（${doc.name}）</div>${rows.join('')}
-      <div style="font-size:11px;margin-top:6px;color:${filled>0?'var(--green)':'var(--red)'}">
-        ${filled > 0 ? `✓ 已填入 ${filled}/${unds.length} 個 Initial Price` : '⚠ 未找到任何 Initial Price，請手動填寫'}
-      </div>`;
-    resBox.classList.add('vis');
-
-    if (filled > 0) toast(`${document.getElementById('e'+id+'_productCode')?.value||'此筆'} 已填入 ${filled} 個 Initial Price`, 'success');
-    else toast('未找到任何 Initial Price，請確認說明書內容', 'warning');
+    const rawText = await callAI(key, ipPrompt, userMsg, extraPart);
+    applyIPResult(id, rawText, unds, doc.name);
 
   } catch(e) {
     toast('識別失敗：'+e.message, 'error');
   } finally {
     runBtn.disabled = false; runBtn.textContent = '🔍 識別 IP';
   }
+}
+
+// ══════════════════════════════════════════════
+//  PASTE IP TABLE (for Natixis-style email tables)
+// ══════════════════════════════════════════════
+async function runPastedIP(id) {
+  const ta = document.getElementById('ippaste-ta-'+id);
+  const text = (ta?.value||'').trim();
+  if (!text) { toast('請先貼上含有 Initial Price 的表格文字', 'warning'); return; }
+
+  const btn = ta.parentElement.querySelector('.ip-run');
+
+  // Step 1: Extract all ticker-price pairs from pasted text
+  const pairs = extractTickerPricePairs(text);
+
+  if (pairs.length > 0) {
+    // Step 2: Check if current underlyings match any parsed tickers
+    const unds = [1,2,3,4,5].map(i => document.getElementById(`e${id}_und${i}`)?.value.trim()||'').filter(Boolean);
+    let matchCount = 0;
+    if (unds.length > 0) {
+      for (const u of unds) {
+        if (pairs.some(p => p.ticker === u.toUpperCase())) matchCount++;
+      }
+    }
+
+    if (matchCount > 0) {
+      // Some underlyings match → fill prices for matching ones
+      const ipMap = {};
+      pairs.forEach(p => { ipMap[p.ticker] = p.price; });
+      // Also try matching by short ticker (e.g. "NVDA" matches "NVDA UW")
+      for (const u of unds) {
+        if (!ipMap[u.toUpperCase()]) {
+          const short = u.replace(/\s+(UW|US|UN|UQ|UA|HK|JP|LN|FP|GR|IT|SM|NA|BB|AU|SJ|CN|CH|SW|IM|DC|NO|SS|KS|TB|MK|IJ|PM|IN)\s*$/i,'').trim().toUpperCase();
+          const found = pairs.find(p => p.ticker.startsWith(short+' '));
+          if (found) ipMap[u] = found.price;
+        }
+      }
+      applyIPResult(id, JSON.stringify(ipMap), unds, '貼上表格');
+    } else {
+      // No underlyings match → auto-fill BOTH underlyings AND prices from table
+      for (let i = 0; i < 5; i++) {
+        const undEl = document.getElementById(`e${id}_und${i+1}`);
+        const ipEl  = document.getElementById(`e${id}_ip${i+1}`);
+        if (i < pairs.length) {
+          if (undEl) { undEl.value = pairs[i].ticker; }
+          if (ipEl)  { ipEl.value = pairs[i].price; ipEl.classList.remove('need'); ipEl.classList.add('auto-filled'); }
+        }
+      }
+      recalcPrices(id);
+      // Show result
+      const resBox = document.getElementById('ipresult-'+id);
+      const rows = pairs.slice(0,5).map(p =>
+        `<div class="ip-result-row"><span class="ip-result-und">${p.ticker}</span><span class="ip-result-price">${p.price.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>`
+      ).join('');
+      resBox.innerHTML = `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;letter-spacing:.06em">識別結果（貼上表格 → 自動填入標的 + IP）</div>${rows}
+        <div style="font-size:11px;margin-top:6px;color:var(--green)">✓ 已從表格填入 ${Math.min(pairs.length,5)} 個標的及 Initial Price</div>`;
+      resBox.classList.add('vis');
+      toast(`已從表格自動填入 ${Math.min(pairs.length,5)} 個標的及 Initial Price`, 'success');
+    }
+    return;
+  }
+
+  // Step 3: No pairs found locally → try AI
+  const unds2 = [1,2,3,4,5].map(i => document.getElementById(`e${id}_und${i}`)?.value.trim()||'').filter(Boolean);
+  const key = document.getElementById('apiKey').value.trim() || localStorage.getItem('api_key_'+currentProvider) || '';
+  if (!key) { toast('本地解析失敗且無 API Key，請確認表格格式或填入 API Key', 'error'); return; }
+
+  btn.disabled = true; btn.textContent = '⏳ AI 解析中...';
+
+  const ipPrompt = `你是永豐銀行 FCN 結構商品助理。
+以下是從交易確認信件中貼上的文字，請找出所有股票的 Ticker（含交易所代碼如 UW、US 等）及 Initial Price。
+
+回傳純 JSON 陣列，每個元素含 ticker 和 price。格式：
+[{"ticker":"NVDA UW","price":200.04},{"ticker":"AMD UW","price":519.85}]
+只回傳 JSON，第一個字元必須是 [`;
+
+  try {
+    const rawText = await callAI(key, ipPrompt, `以下是貼上的內容：\n\n${text}`);
+    const cleaned = rawText.replace(/```json|```/g,'').trim();
+    let aiPairs;
+    try { aiPairs = JSON.parse(cleaned); } catch(e) {
+      // Try extracting JSON array from response
+      const m = cleaned.match(/\[[\s\S]*\]/);
+      if (m) aiPairs = JSON.parse(m[0]);
+      else throw new Error('AI 回傳格式無法解析');
+    }
+    if (Array.isArray(aiPairs) && aiPairs.length > 0) {
+      for (let i = 0; i < 5; i++) {
+        const undEl = document.getElementById(`e${id}_und${i+1}`);
+        const ipEl  = document.getElementById(`e${id}_ip${i+1}`);
+        if (i < aiPairs.length) {
+          if (undEl && aiPairs[i].ticker) undEl.value = aiPairs[i].ticker;
+          if (ipEl && aiPairs[i].price != null) { ipEl.value = Number(aiPairs[i].price); ipEl.classList.remove('need'); ipEl.classList.add('auto-filled'); }
+        }
+      }
+      recalcPrices(id);
+      const resBox = document.getElementById('ipresult-'+id);
+      const rows = aiPairs.slice(0,5).map(p =>
+        `<div class="ip-result-row"><span class="ip-result-und">${p.ticker||'?'}</span><span class="ip-result-price">${Number(p.price).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>`
+      ).join('');
+      resBox.innerHTML = `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;letter-spacing:.06em">識別結果（AI 解析貼上表格）</div>${rows}
+        <div style="font-size:11px;margin-top:6px;color:var(--green)">✓ AI 已填入 ${Math.min(aiPairs.length,5)} 個標的及 Initial Price</div>`;
+      resBox.classList.add('vis');
+      toast(`AI 已填入 ${Math.min(aiPairs.length,5)} 個標的及 Initial Price`, 'success');
+    } else {
+      toast('AI 未能從貼上內容中解析出 Initial Price', 'warning');
+    }
+  } catch(e) {
+    toast('AI 解析失敗：'+e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔍 解析 IP';
+  }
+}
+
+// Extract ticker-price pairs from pasted table text
+function extractTickerPricePairs(text) {
+  const SUFFIX_RE = /\b([A-Z]{1,6})\s+(UW|US|UN|UQ|UA|UF|UP|HK|JP|LN|FP|GR|IT|SM|NA|BB|AU|SJ|CN|CH|SW|IM|DC|NO|SS|KS|TB|MK|IJ|PM|IN)\b/gi;
+  const pairs = [];
+  const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    // Skip header lines
+    if (/^\s*(Share|Ticker|Exchange|Initial|Price|Header)\b/i.test(line) && !/\d/.test(line.replace(/\d+\.\d+/g,''))) continue;
+
+    // Find ticker with exchange suffix (e.g. "NVDA UW")
+    const allMatches = [...line.matchAll(SUFFIX_RE)];
+    if (allMatches.length === 0) continue;
+
+    // Use the FIRST ticker match on this line
+    const tickerFull = (allMatches[0][1] + ' ' + allMatches[0][2]).toUpperCase();
+    const tickerEndPos = allMatches[0].index + allMatches[0][0].length;
+
+    // Find ALL numbers on this line after the ticker
+    const afterTicker = line.substring(tickerEndPos);
+    const nums = [...afterTicker.matchAll(/(\d[\d,]*\.?\d*)/g)];
+
+    if (nums.length > 0) {
+      // First standalone number after ticker is Initial Price
+      const price = parseFloat(nums[0][1].replace(/,/g, ''));
+      if (price > 0.01 && price < 1000000) {
+        pairs.push({ ticker: tickerFull, price });
+      }
+    }
+  }
+  return pairs;
+}
+
+// Shared function to apply IP results to entry fields
+function applyIPResult(id, rawText, unds, sourceName) {
+  const ipMap = parseJSON(rawText);
+  let filled = 0;
+  const rows = unds.map((code, idx) => {
+    const ipEl = document.getElementById(`e${id}_ip${idx+1}`);
+    const price = ipMap[code];
+    if (price != null && !isNaN(Number(price))) {
+      if (ipEl) { ipEl.value = Number(price); ipEl.classList.remove('need'); ipEl.classList.add('auto-filled'); }
+      filled++;
+      return `<div class="ip-result-row"><span class="ip-result-und">${code}</span><span class="ip-result-price">${Number(price).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>`;
+    } else {
+      return `<div class="ip-result-row"><span class="ip-result-und">${code}</span><span class="ip-result-na">未找到</span></div>`;
+    }
+  });
+  recalcPrices(id);
+
+  const resBox = document.getElementById('ipresult-'+id);
+  resBox.innerHTML = `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;letter-spacing:.06em">識別結果（${sourceName}）</div>${rows.join('')}
+    <div style="font-size:11px;margin-top:6px;color:${filled>0?'var(--green)':'var(--red)'}">
+      ${filled > 0 ? `✓ 已填入 ${filled}/${unds.length} 個 Initial Price` : '⚠ 未找到任何 Initial Price，請手動填寫'}
+    </div>`;
+  resBox.classList.add('vis');
+
+  if (filled > 0) toast(`${document.getElementById('e'+id+'_productCode')?.value||'此筆'} 已填入 ${filled} 個 Initial Price`, 'success');
+  else toast('未找到任何 Initial Price，請確認內容', 'warning');
 }
 
 // ══════════════════════════════════════════════
